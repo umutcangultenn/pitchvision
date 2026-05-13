@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0a0f0d;
+  --foreground: #e8f7f2;
+}
+
+body {
+  color: var(--foreground);
+  background: linear-gradient(180deg, #0a0f0d 0%, #0d1a16 100%);
+  min-height: 100vh;
+}
+
+/* Premium UI temel border/shadow */
+.pv-surface {
+  background: rgba(15, 23, 20, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.pv-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.pv-ring {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 10px 30px rgba(0, 0, 0, 0.35);
+}
