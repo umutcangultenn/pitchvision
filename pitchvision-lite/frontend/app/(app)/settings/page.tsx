@@ -40,6 +40,7 @@ import {
   type VideoProcessingDto,
 } from "@/lib/api";
 import { BillingPanel } from "@/components/settings/BillingPanel";
+import { PrivacyPanel, DroneChecklistPanel } from "@/components/settings/PrivacyPanel";
 
 type TabId =
   | "organization"
@@ -92,6 +93,8 @@ const TAB_IDS: TabId[] = TABS.map((t) => t.id);
 export default function SettingsPage() {
   const [tab, setTab] = useState<TabId>("organization");
   const [toast, setToast] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
 
   const [org, setOrg] = useState<OrganizationSettingsDto | null>(null);
   const [users, setUsers] = useState<SettingsUserDto[]>([]);
@@ -700,107 +703,12 @@ export default function SettingsPage() {
       )}
 
       {tab === "privacy" && privacy && (
-        <div className="space-y-4">
-          <div className="rounded-2xl pv-card p-6 space-y-4">
-            <div className="text-sm font-semibold text-white">Veri ve Gizlilik</div>
-            <div className="space-y-3">
-              {(
-                [
-                  ["anonymize_player_data", "Oyuncu verilerini anonimleştir"],
-                  ["gdpr_enabled", "KVKK / GDPR bilgilendirme ve süreçleri etkin"],
-                  ["parental_consent_required", "Veli onayı zorunlu (genç yaş grupları)"],
-                  ["u8_u17_data_security_enabled", "U8–U17 gelişmiş veri güvenliği modu"],
-                ] as const
-              ).map(([key, label]) => (
-                <label
-                  key={key}
-                  className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3"
-                >
-                  <span className="text-sm text-white">{label}</span>
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 accent-emerald-500"
-                    checked={privacy[key]}
-                    onChange={() => togglePrivacy(key)}
-                  />
-                </label>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => void savePrivacy()}
-              className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
-            >
-              Gizlilik ayarlarını kaydet
-            </button>
-          </div>
-
-          <div className="rounded-2xl border border-amber-500/25 bg-amber-950/30 p-5 text-sm text-amber-100/90">
-            <div className="font-semibold text-amber-100">U8–U17 veri güvenliği</div>
-            <p className="mt-2 text-text-muted">
-              Çocuk ve genç oyuncu verilerinde asgari işleme ilkesi uygulanmalı; veli bilgilendirmesi
-              ve gerektiğinde açık rıza kayıtları saklanmalıdır. Bu ekran bilgilendirme amaçlıdır;
-              hukuki metinler kulüp avukatınız tarafından sağlanmalıdır.
-            </p>
-          </div>
-
-          <div className="rounded-2xl pv-card p-6 space-y-3 text-sm text-text-muted">
-            <div className="font-semibold text-white">KVKK bilgilendirme (placeholder)</div>
-            <p>
-              Aydınlatma metni, veri işleme envanteri ve başvuru kanalları burada PDF veya URL
-              olarak yayınlanacaktır. Şimdilik yalnızca yer tutucudur.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => void apiPostSettingsDataExport().then(() => showToast("Export talebi alındı."))}
-                className="rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm text-white"
-              >
-                Oyuncu verisi export
-              </button>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Oyuncu ID — anonimleştir">
-                <div className="flex gap-2">
-                  <input id="anonymize-id" className={inputClass()} placeholder="ör. 12" />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const el = document.getElementById("anonymize-id") as HTMLInputElement;
-                      const id = Number(el?.value);
-                      if (!id) return showToast("Geçerli oyuncu ID girin.");
-                      void apiPostSettingsDataAnonymize(id).then(() =>
-                        showToast("Anonimleştirme talebi gönderildi.")
-                      );
-                    }}
-                    className="shrink-0 rounded-xl bg-white/10 px-3 py-2 text-xs text-white"
-                  >
-                    Gönder
-                  </button>
-                </div>
-              </Field>
-              <Field label="Oyuncu ID — silme talebi">
-                <div className="flex gap-2">
-                  <input id="delete-id" className={inputClass()} placeholder="ör. 12" />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const el = document.getElementById("delete-id") as HTMLInputElement;
-                      const id = Number(el?.value);
-                      if (!id) return showToast("Geçerli oyuncu ID girin.");
-                      void apiPostSettingsDataDeleteRequest(id).then(() =>
-                        showToast("Silme talebi kayda alındı.")
-                      );
-                    }}
-                    className="shrink-0 rounded-xl bg-white/10 px-3 py-2 text-xs text-white"
-                  >
-                    Talep
-                  </button>
-                </div>
-              </Field>
-            </div>
-          </div>
-        </div>
+        <PrivacyPanel
+          privacy={privacy}
+          onToggle={togglePrivacy}
+          onSave={() => void savePrivacy()}
+          onToast={showToast}
+        />
       )}
 
       {tab === "video" && video && (
@@ -874,45 +782,11 @@ export default function SettingsPage() {
       )}
 
       {tab === "drone" && drone && (
-        <div className="rounded-2xl pv-card p-6 space-y-4">
-          <div className="text-sm font-semibold text-white">Drone / çekim checklist’i</div>
-          <p className="text-sm text-text-muted">
-            Maç günü çekim öncesi güvenlik ve uygunluk kontrolleri. Her maddeyi saha ekibiyle birlikte
-            işaretleyin.
-          </p>
-          <div className="space-y-2">
-            {(
-              [
-                ["flight_permission_checked", "Uçuş izni kontrol edildi"],
-                ["pitch_safety_secured", "Saha güvenliği sağlandı"],
-                ["parent_player_consents_checked", "Veli/oyuncu izinleri kontrol edildi"],
-                ["camera_angle_ok", "Kamera açısı uygun"],
-                ["pitch_lines_visible", "Saha çizgileri görünür"],
-                ["wind_weather_ok", "Rüzgar/hava durumu uygun"],
-              ] as const
-            ).map(([key, label]) => (
-              <label
-                key={key}
-                className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3"
-              >
-                <span className="text-sm text-white">{label}</span>
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-emerald-500"
-                  checked={drone[key]}
-                  onChange={() => toggleDrone(key)}
-                />
-              </label>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => void saveDrone()}
-            className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
-          >
-            Checklist’i kaydet
-          </button>
-        </div>
+        <DroneChecklistPanel
+          drone={drone}
+          onChange={toggleDrone}
+          onSave={() => void saveDrone()}
+        />
       )}
 
       {tab === "notifications" && notifications && (

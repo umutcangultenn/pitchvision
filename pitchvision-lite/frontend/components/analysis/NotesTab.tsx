@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Note = {
   id: string;
@@ -153,11 +154,19 @@ export function NotesTab({ notes, onAddNote, onDeleteNote, currentTime = 0 }: No
       </div>
 
       {sortedNotes.length === 0 && !isAdding && (
-        <div className="text-center py-8">
-          <div className="text-4xl mb-2">📝</div>
-          <div className="text-text-muted text-sm mb-2">Henüz not eklenmemiş</div>
-          <div className="text-xs text-text-soft">Video analizi sırasında önemli gözlemlerinizi not alın</div>
-        </div>
+        <EmptyState
+          title="Henüz not eklenmemiş"
+          description="Video analizi sırasında önemli gözlemlerini not alabilirsin."
+          icon="📝"
+          action={
+            <button
+              onClick={() => setIsAdding(true)}
+              className="px-4 py-2 text-sm font-semibold rounded-xl bg-emerald-600 text-white hover:bg-emerald-500 transition-all"
+            >
+              Not Ekle
+            </button>
+          }
+        />
       )}
     </div>
   );

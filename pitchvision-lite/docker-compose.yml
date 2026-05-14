@@ -1,6 +1,9 @@
 services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: pitchvision
       POSTGRES_PASSWORD: pitchvision
@@ -13,56 +16,117 @@ services:
       test: ["CMD-SHELL", "pg_isready -U pitchvision -d pitchvision"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
 
+  # ── Redis ───────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     ports:
       - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
-      retries: 5
+      retries: 10
 
+  # ── MinIO (opsiyonel — STORAGE_BACKEND=minio ise aktif) ─────────────────────
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web console
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - minio   # Sadece: docker compose --profile minio up
+
+  # ── Backend (FastAPI) ───────────────────────────────────────────────────────
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    restart: unless-stopped
     ports:
       - "8000:8000"
     env_file:
       - .env
     environment:
+      # Compose içi servis adları — .env'deki localhost değerlerini ezer
       DATABASE_URL: postgresql+psycopg2://pitchvision:pitchvision@postgres:5432/pitchvision
       REDIS_URL: redis://redis:6379/0
-      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-change-me}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+      DEBUG: ${DEBUG:-false}
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-pitchvision}
+      MINIO_USE_SSL: ${MINIO_USE_SSL:-false}
     volumes:
       - ./backend:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      - backend_uploads:/app/uploads
+    command: >
+      sh -c "
+        echo '⏳ Waiting for DB...' &&
+        python -c \"
+import time, psycopg2, os
+url = os.environ['DATABASE_URL'].replace('postgresql+psycopg2://', '')
+for i in range(30):
+    try:
+        psycopg2.connect(url); break
+    except Exception:
+        time.sleep(1)
+\" &&
+        echo '✅ DB ready' &&
+        alembic upgrade head &&
+        echo '🌱 Seeding demo data...' &&
+        python scripts/seed_demo.py &&
+        echo '🚀 Starting API...' &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
 
+  # ── Frontend (Next.js) ──────────────────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       target: development
+    restart: unless-stopped
     ports:
       - "3000:3000"
     env_file:
       - .env
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      NEXT_PUBLIC_USE_MOCKS: ${NEXT_PUBLIC_USE_MOCKS:-true}
     volumes:
       - ./frontend:/app
-      - /app/node_modules
-    command: npm run dev
+      - frontend_node_modules:/app/node_modules
+      - frontend_next:/app/.next
     depends_on:
       - backend
 
 volumes:
   pgdata:
+  miniodata:
+  backend_uploads:
+  frontend_node_modules:
+  frontend_next:

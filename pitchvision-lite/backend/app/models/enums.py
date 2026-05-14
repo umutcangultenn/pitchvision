@@ -40,6 +40,13 @@ class AlertType(str, Enum):
     HALF_SPACE = "half_space"
     DUEL = "duel"
     LINE_BREAKING_PASS = "line_breaking_pass"
+    # tactical analytics engine
+    DEFENSIVE_LINE_BREAK = "defensive_line_break"
+    BLOCK_GAP_WIDE = "block_gap_wide"
+    DEPTH_RUN_OPPORTUNITY = "depth_run_opportunity"
+    POOR_TRANSITION_DEFENSE = "poor_transition_defense"
+    COMPACTNESS_LOST = "compactness_lost"
+    LACK_OF_SUPPORT_RUN = "lack_of_support_run"
     OTHER = "other"
 
 

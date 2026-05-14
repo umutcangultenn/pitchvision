@@ -10,7 +10,7 @@ import { useAuthStore } from "@/lib/store";
 export default function LoginPage() {
   const router = useRouter();
   const { setAuthenticated } = useAuthStore();
-  const [email, setEmail] = useState("admin@demo.pitchvision.local");
+  const [email, setEmail] = useState("coach@anadolu-akademi.demo");
   const [password, setPassword] = useState("demo12345");
 
   return (

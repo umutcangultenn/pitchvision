@@ -3,16 +3,20 @@
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
 
-import { mockAlerts, mockMatches, mockTeams, mockVideos } from "@/data/demo";
 import { useAppStore } from "@/lib/appStore";
+import { useMatches } from "@/hooks/useMatches";
+import { mockTeams } from "@/data/demo";
 import type { Match } from "@/types/domain";
 
 import { FilterBar } from "@/components/ui/FilterBar";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { MatchListCard, type MatchUiStatus } from "@/components/cards/MatchListCard";
+import { mockAlerts, mockVideos } from "@/data/demo";
 
 export default function MatchesPage() {
   const { teamId } = useAppStore();
+  const { data: allMatches, loading, error, refetch } = useMatches();
   const [teamFilter, setTeamFilter] = useState<number>(teamId);
   const [ageCategory, setAgeCategory] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");
@@ -23,7 +27,8 @@ export default function MatchesPage() {
   const [toDate, setToDate] = useState<string>("");
 
   const matches = useMemo(() => {
-    const byTeam = mockMatches.filter((m) => m.teamId === teamFilter);
+    const source = allMatches ?? [];
+    const byTeam = source.filter((m) => m.teamId === teamFilter);
 
     const getAlertCount = (matchId: number) =>
       mockAlerts.filter((a) => a.matchId === matchId).length;
@@ -58,6 +63,26 @@ export default function MatchesPage() {
   }, [teamFilter, ageCategory, status, videoSource, opponent, minAlerts, fromDate, toDate]);
 
   const teamName = useMemo(() => mockTeams.find((t) => t.id === teamFilter)?.name ?? "Takım", [teamFilter]);
+
+  if (loading) {
+    return (
+      <div className="space-y-4 animate-pulse">
+        <div className="h-10 rounded-xl bg-white/5 w-64" />
+        {[...Array(3)].map((_, i) => <div key={i} className="h-24 rounded-2xl bg-white/5" />)}
+      </div>
+    );
+  }
+
+  if (error && !allMatches) {
+    return (
+      <ErrorState
+        title="Maçlar yüklenemedi"
+        description={error.message}
+        icon="📡"
+        action={<button onClick={refetch} className="px-4 py-2 text-sm font-semibold rounded-xl bg-emerald-600 text-white hover:bg-emerald-500 transition-all">Yeniden Dene</button>}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

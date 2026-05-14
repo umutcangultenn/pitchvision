@@ -139,9 +139,13 @@ export function AlertsTab({ alerts, onShowInVideo, onCreateClip, onUpdateStatus 
       {filteredAlerts.length === 0 && (
         <div className="py-8">
           <EmptyState
-            title="Uyarı bulunamadı"
-            description={filter === "all" ? "Bu maçta henüz taktiksel uyarı tespit edilmedi." : `"${getStatusLabel(filter)}" durumunda uyarı bulunmuyor.`}
-            icon="⚠️"
+            title="Taktiksel uyarı bulunamadı"
+            description={
+              filter === "all"
+                ? "Bu maçta kural motorunun tetiklediği taktiksel uyarı tespit edilmedi."
+                : `"${filter}" durumunda uyarı bulunmuyor.`
+            }
+            icon="⚡"
           />
         </div>
       )}

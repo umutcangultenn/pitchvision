@@ -21,8 +21,9 @@ export type AlertType =
   | "defensive_line_break"
   | "block_gap_wide"
   | "depth_run_opportunity"
-  | "transition_slow"
+  | "poor_transition_defense"
   | "compactness_lost"
+  | "lack_of_support_run"
   | "other";
 
 export type Severity = "low" | "medium" | "high" | "critical";

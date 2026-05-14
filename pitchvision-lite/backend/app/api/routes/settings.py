@@ -174,23 +174,109 @@ def get_subscription(session: Session = Depends(get_session)):
 # Data Management
 @router.post("/data/export", response_model=dict)
 def export_player_data(session: Session = Depends(get_session)):
-    """Export all player data"""
-    return {"status": "success", "message": "Data export initiated", "format": "json"}
+    """
+    Tüm oyuncu verilerini dışa aktar.
+
+    TODO: Gerçek implementasyon:
+    - Tüm oyuncu kayıtlarını JSON/CSV olarak hazırla
+    - Storage'a yükle ve indirme URL'i döndür
+    - AuditLog kaydı oluştur
+    - KVKK madde 11 — veri sahibinin erişim hakkı
+    """
+    return {
+        "status": "queued",
+        "message": "Veri dışa aktarma kuyruğa alındı. Hazır olduğunda bildirim gönderilecek.",
+        "format": "json",
+        # TODO: "download_url": "<signed_url>",
+        # TODO: "expires_at": "<iso_datetime>",
+    }
 
 
 @router.post("/data/anonymize", response_model=dict)
 def anonymize_player_data(
-    player_id: int = Query(..., description="Oyuncu ID"),
+    player_id: int = Query(..., description="Anonimleştirilecek oyuncu ID"),
     session: Session = Depends(get_session),
 ):
-    """Anonymize player data"""
-    return {"status": "success", "message": f"Player {player_id} data anonymized"}
+    """
+    Oyuncu kişisel verilerini anonimleştir.
+
+    TODO: Gerçek implementasyon:
+    - first_name / last_name → rastgele token ile değiştir
+    - birth_date → yalnızca yıl bırak
+    - photo_url → sil
+    - AuditLog kaydı oluştur (action=DATA_ANONYMIZE)
+    - İlgili ScoutNote ve PlayerMatchPerformance kayıtlarını güncelle
+    """
+    player = session.get(__import__("app.models", fromlist=["Player"]).Player, player_id)
+    if not player:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Oyuncu bulunamadı.")
+
+    return {
+        "status": "ok",
+        "player_id": player_id,
+        "message": f"Oyuncu #{player_id} verileri anonimleştirildi (placeholder — gerçek silme yapılmadı).",
+        # TODO: Gerçek anonimleştirme burada yapılacak
+    }
 
 
 @router.post("/data/delete-request", response_model=dict)
 def request_data_deletion(
-    player_id: int = Query(..., description="Oyuncu ID"),
+    player_id: int = Query(..., description="Silinmesi talep edilen oyuncu ID"),
     session: Session = Depends(get_session),
 ):
-    """Request player data deletion"""
-    return {"status": "success", "message": "Data deletion request submitted"}
+    """
+    Oyuncu verisi silme talebi oluştur.
+
+    TODO: Gerçek implementasyon:
+    - Silme talebini bir kuyruk/tablo'ya kaydet
+    - Yöneticiye bildirim gönder
+    - AuditLog kaydı oluştur (action=DATA_DELETE)
+    - KVKK madde 7 — silme ve yok etme hakkı
+    - 30 gün içinde işleme zorunluluğu
+    """
+    return {
+        "status": "submitted",
+        "player_id": player_id,
+        "message": "Silme talebi alındı. 30 gün içinde işleme alınacak.",
+        "reference": f"DEL-{player_id}-{__import__('time').strftime('%Y%m%d')}",
+        # TODO: Gerçek silme iş akışı burada başlatılacak
+    }
+
+
+@router.get("/data/consent/{player_id}", response_model=dict)
+def get_player_consent(
+    player_id: int,
+    session: Session = Depends(get_session),
+):
+    """
+    Oyuncunun veli onayı kayıtlarını getir.
+
+    TODO: ParentalConsent tablosundan gerçek kayıtları döndür.
+    """
+    return {
+        "player_id": player_id,
+        "consents": [],  # TODO: ParentalConsent.query(player_id=player_id)
+        "message": "Veli onayı kayıtları (placeholder — tablo henüz aktif değil).",
+    }
+
+
+@router.post("/data/consent", response_model=dict)
+def record_consent(
+    player_id: int = Query(...),
+    consent_type: str = Query(..., description="video_recording | data_processing | performance_analysis"),
+    guardian_name: str = Query(...),
+    session: Session = Depends(get_session),
+):
+    """
+    Veli onayı kaydet.
+
+    TODO: ParentalConsent tablosuna kayıt ekle + AuditLog.
+    """
+    return {
+        "status": "recorded",
+        "player_id": player_id,
+        "consent_type": consent_type,
+        "guardian_name": guardian_name,
+        "message": "Onay kaydedildi (placeholder — DB'ye yazılmadı).",
+    }
