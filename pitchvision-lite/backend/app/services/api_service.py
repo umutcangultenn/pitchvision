@@ -6,7 +6,7 @@ from typing import Any, TypeVar
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
 
-from app.core.security import create_mock_token, hash_password, verify_password
+from app.core.security import hash_password, verify_password
 from app.models import (
     Clip,
     DrillRecommendation,
@@ -69,31 +69,6 @@ def _patch(instance: Any, payload: Any) -> Any:
     return instance
 
 
-def register(session: Session, payload: RegisterRequest) -> TokenResponse:
-    existing = session.exec(select(User).where(User.email == payload.email)).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Bu e-posta zaten kayıtlı.")
-
-    user = User(
-        email=str(payload.email),
-        full_name=payload.full_name,
-        hashed_password=hash_password(payload.password),
-        role=payload.role,
-        organization_id=payload.organization_id,
-        is_active=True,
-    )
-    session.add(user)
-    session.commit()
-    session.refresh(user)
-    token = create_mock_token(user.id)
-    return TokenResponse(access_token=token, user=user)
-
-
-def login(session: Session, payload: LoginRequest) -> TokenResponse:
-    user = session.exec(select(User).where(User.email == payload.email)).first()
-    if not user or not verify_password(payload.password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="E-posta veya parola hatalı.")
-    return TokenResponse(access_token=create_mock_token(user.id), user=user)
 
 
 def list_teams(session: Session, organization_id: int) -> list[Team]:
@@ -291,8 +266,15 @@ def create_clip(session: Session, payload: ClipCreate) -> Clip:
     return item
 
 
-def list_reports(session: Session) -> list[Report]:
-    return list(session.exec(select(Report).order_by(Report.created_at.desc())))
+def list_reports(session: Session, organization_id: int) -> list[Report]:
+    return list(
+        session.exec(
+            select(Report)
+            .join(Match, Report.match_id == Match.id)
+            .where(Match.organization_id == organization_id)
+            .order_by(Report.created_at.desc())
+        )
+    )
 
 
 def get_report(session: Session, report_id: int) -> Report:
@@ -525,9 +507,6 @@ def start_match_processing(session: Session, match_id: int) -> Match:
     return match
 
 
-def ensure_demo_seed(session: Session) -> None:
-    # Seed önceki adımda mevcut; bu kanca endpoint öncesi çağrılar için hazır.
-    _ = session
 
 
 def force_create_drill(session: Session, payload: DrillRecommendationCreate) -> DrillRecommendation:
@@ -551,60 +530,53 @@ def force_update_drill(session: Session, drill_id: int, payload: DrillRecommenda
 
 # --- PitchVision Lite: Ayarlar (DB + bellek içi ek alanlar) ---
 
-_LITE_SETTINGS: dict[str, Any] = {
-    "org_contact": {},
-    "video": {
-        "default_pitch_size": "105x68m",
-        "default_game_format": "11v11",
-        "detection_confidence_threshold": 0.72,
-        "alert_threshold_value": 0.55,
-        "default_clip_duration": 12,
-    },
-    "notifications": {
-        "notify_analysis_complete": True,
-        "notify_errors": True,
-        "notify_new_report": True,
-        "notify_scout_note": True,
-        "notify_player_development": True,
-    },
-    "privacy": {
-        "anonymize_player_data": False,
-        "gdpr_enabled": True,
-        "parental_consent_required": True,
-        "u8_u17_data_security_enabled": True,
-    },
-    "active_season_id": None,
-    "season_name_to_id": {},
-    "season_id_to_name": {},
-    "next_season_id": 1,
-    "drone": {
-        "flight_permission_checked": False,
-        "pitch_safety_secured": False,
-        "parent_player_consents_checked": False,
-        "camera_angle_ok": False,
-        "pitch_lines_visible": False,
-        "wind_weather_ok": False,
-    },
-}
+_LITE_SETTINGS: dict[int, Any] = {}
 
-
-def _first_organization(session: Session) -> Organization:
-    org = session.exec(select(Organization)).first()
-    if not org:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organizasyon bulunamadı.")
-    return org
-
-
-def _org_contact(org_id: int) -> dict[str, Any]:
-    return _LITE_SETTINGS["org_contact"].setdefault(
-        org_id,
+def _get_org_settings(org_id: int) -> dict[str, Any]:
+    if org_id not in _LITE_SETTINGS:
+        _LITE_SETTINGS[org_id] = {
+            "org_contact": {"contact_email": None, "contact_phone": None, "website": None},
+            "video": {
+                "default_pitch_size": "105x68m",
+                "default_game_format": "11v11",
+                "detection_confidence_threshold": 0.72,
+                "alert_threshold_value": 0.55,
+                "default_clip_duration": 12,
+            },
+            "notifications": {
+                "notify_analysis_complete": True,
+                "notify_errors": True,
+                "notify_new_report": True,
+                "notify_scout_note": True,
+                "notify_player_development": True,
+            },
+            "privacy": {
+                "anonymize_player_data": False,
+                "gdpr_enabled": True,
+                "parental_consent_required": True,
+                "u8_u17_data_security_enabled": True,
+            },
+            "active_season_id": None,
+            "season_name_to_id": {},
+            "season_id_to_name": {},
+            "next_season_id": 1,
+            "drone": {
+                "flight_permission_checked": False,
+                "pitch_safety_secured": False,
+                "parent_player_consents_checked": False,
+                "camera_angle_ok": False,
+                "pitch_lines_visible": False,
+                "wind_weather_ok": False,
+            },
+        }
+    return _LITE_SETTINGS[org_id]
         {"contact_email": None, "contact_phone": None, "website": None},
     )
 
 
-def get_organization_settings(session: Session) -> OrganizationSettingsRead:
-    org = _first_organization(session)
-    extra = _org_contact(org.id)
+def get_organization_settings(session: Session, organization_id: int) -> OrganizationSettingsRead:
+    org = get_org(session, organization_id)
+    extra = _get_org_settings(org.id)["org_contact"]
     return OrganizationSettingsRead(
         id=org.id,
         name=org.name,
@@ -618,9 +590,9 @@ def get_organization_settings(session: Session) -> OrganizationSettingsRead:
 
 
 def update_organization_settings(
-    session: Session, data: OrganizationSettingsUpdate
+    session: Session, organization_id: int, data: OrganizationSettingsUpdate
 ) -> OrganizationSettingsRead:
-    org = _first_organization(session)
+    org = get_org(session, organization_id)
     org.name = data.name
     org.city = data.city
     org.logo_url = data.logo_url
@@ -628,16 +600,15 @@ def update_organization_settings(
     session.add(org)
     session.commit()
     session.refresh(org)
-    extra = _org_contact(org.id)
+    extra = _get_org_settings(org.id)["org_contact"]
     extra["contact_email"] = data.contact_email
     extra["contact_phone"] = data.contact_phone
     extra["website"] = data.website
-    return get_organization_settings(session)
+    return get_organization_settings(session, organization_id)
 
 
-def list_users(session: Session) -> list[SettingsUserRead]:
-    org = _first_organization(session)
-    users = list(session.exec(select(User).where(User.organization_id == org.id)))
+def list_users(session: Session, organization_id: int) -> list[SettingsUserRead]:
+    users = list(session.exec(select(User).where(User.organization_id == organization_id)))
     out: list[SettingsUserRead] = []
     for u in users:
         out.append(
@@ -701,9 +672,8 @@ def deactivate_user(session: Session, user_id: int) -> SettingsUserRead:
     )
 
 
-def settings_list_teams(session: Session) -> list[SettingsTeamRead]:
-    org = _first_organization(session)
-    teams = list(session.exec(select(Team).where(Team.organization_id == org.id)))
+def settings_list_teams(session: Session, organization_id: int) -> list[SettingsTeamRead]:
+    teams = list(session.exec(select(Team).where(Team.organization_id == organization_id)))
     return [
         SettingsTeamRead(
             id=t.id,
@@ -721,8 +691,8 @@ def settings_list_teams(session: Session) -> list[SettingsTeamRead]:
 
 
 def settings_create_team(session: Session, data: TeamCreateRequest) -> SettingsTeamRead:
-    org = _first_organization(session)
-    org_id = data.organization_id if data.organization_id is not None else org.id
+    # Team creation via settings usually implies the org is already known or passed
+    org_id = data.organization_id
     season = data.season or "2025-26"
     payload = TeamCreate(
         organization_id=org_id,
@@ -748,25 +718,26 @@ def settings_create_team(session: Session, data: TeamCreateRequest) -> SettingsT
     )
 
 
-def _register_season_names(names: list[str]) -> None:
+def _register_season_names(org_id: int, names: list[str]) -> None:
+    org_sett = _get_org_settings(org_id)
     for name in names:
-        if name not in _LITE_SETTINGS["season_name_to_id"]:
-            sid = _LITE_SETTINGS["next_season_id"]
-            _LITE_SETTINGS["next_season_id"] += 1
-            _LITE_SETTINGS["season_name_to_id"][name] = sid
-            _LITE_SETTINGS["season_id_to_name"][sid] = name
+        if name not in org_sett["season_name_to_id"]:
+            sid = org_sett["next_season_id"]
+            org_sett["next_season_id"] += 1
+            org_sett["season_name_to_id"][name] = sid
+            org_sett["season_id_to_name"][sid] = name
 
 
-def list_seasons(session: Session) -> list[SeasonRead]:
-    org = _first_organization(session)
-    teams = list(session.exec(select(Team).where(Team.organization_id == org.id)))
+def list_seasons(session: Session, organization_id: int) -> list[SeasonRead]:
+    org_sett = _get_org_settings(organization_id)
+    teams = list(session.exec(select(Team).where(Team.organization_id == organization_id)))
     unique = sorted({t.season for t in teams}) if teams else ["2025-26"]
-    _register_season_names(unique)
+    _register_season_names(organization_id, unique)
     counts = Counter(t.season for t in teams)
-    active_id = _LITE_SETTINGS["active_season_id"]
+    active_id = org_sett["active_season_id"]
     out: list[SeasonRead] = []
     for name in unique:
-        sid = _LITE_SETTINGS["season_name_to_id"][name]
+        sid = org_sett["season_name_to_id"][name]
         out.append(
             SeasonRead(
                 id=sid,
@@ -782,16 +753,16 @@ def list_seasons(session: Session) -> list[SeasonRead]:
     return out
 
 
-def activate_season(session: Session, season_id: int) -> SeasonRead:
-    name = _LITE_SETTINGS["season_id_to_name"].get(season_id)
+def activate_season(session: Session, organization_id: int, season_id: int) -> SeasonRead:
+    org_sett = _get_org_settings(organization_id)
+    name = org_sett["season_id_to_name"].get(season_id)
     if not name:
-        list_seasons(session)
-        name = _LITE_SETTINGS["season_id_to_name"].get(season_id)
+        list_seasons(session, organization_id)
+        name = org_sett["season_id_to_name"].get(season_id)
     if not name:
         raise _not_found("Sezon")
-    _LITE_SETTINGS["active_season_id"] = season_id
-    org = _first_organization(session)
-    teams = list(session.exec(select(Team).where(Team.organization_id == org.id)))
+    org_sett["active_season_id"] = season_id
+    teams = list(session.exec(select(Team).where(Team.organization_id == organization_id)))
     return SeasonRead(
         id=season_id,
         name=name,
@@ -802,57 +773,60 @@ def activate_season(session: Session, season_id: int) -> SeasonRead:
     )
 
 
-def get_video_processing_settings(session: Session) -> VideoProcessingSettingsRead:
+def get_video_processing_settings(session: Session, organization_id: int) -> VideoProcessingSettingsRead:
     _ = session
-    return VideoProcessingSettingsRead(**_LITE_SETTINGS["video"])
+    return VideoProcessingSettingsRead(**_get_org_settings(organization_id)["video"])
 
 
 def update_video_processing_settings(
-    session: Session, data: VideoProcessingSettingsUpdate
+    session: Session, organization_id: int, data: VideoProcessingSettingsUpdate
 ) -> VideoProcessingSettingsRead:
     _ = session
-    _LITE_SETTINGS["video"].update(data.model_dump())
-    return VideoProcessingSettingsRead(**_LITE_SETTINGS["video"])
+    _get_org_settings(organization_id)["video"].update(data.model_dump())
+    return VideoProcessingSettingsRead(**_get_org_settings(organization_id)["video"])
 
 
-def get_notification_settings(session: Session) -> NotificationSettingsRead:
+def get_notification_settings(session: Session, organization_id: int) -> NotificationSettingsRead:
     _ = session
-    return NotificationSettingsRead(**_LITE_SETTINGS["notifications"])
+    return NotificationSettingsRead(**_get_org_settings(organization_id)["notifications"])
 
 
 def update_notification_settings(
-    session: Session, data: NotificationSettingsUpdate
+    session: Session, organization_id: int, data: NotificationSettingsUpdate
 ) -> NotificationSettingsRead:
     _ = session
-    _LITE_SETTINGS["notifications"].update(data.model_dump())
-    return NotificationSettingsRead(**_LITE_SETTINGS["notifications"])
+    _get_org_settings(organization_id)["notifications"].update(data.model_dump())
+    return NotificationSettingsRead(**_get_org_settings(organization_id)["notifications"])
 
 
-def get_privacy_settings(session: Session) -> PrivacySettingsRead:
+def get_privacy_settings(session: Session, organization_id: int) -> PrivacySettingsRead:
     _ = session
-    return PrivacySettingsRead(**_LITE_SETTINGS["privacy"])
+    return PrivacySettingsRead(**_get_org_settings(organization_id)["privacy"])
 
 
-def update_privacy_settings(session: Session, data: PrivacySettingsUpdate) -> PrivacySettingsRead:
+def update_privacy_settings(
+    session: Session, organization_id: int, data: PrivacySettingsUpdate
+) -> PrivacySettingsRead:
     _ = session
-    _LITE_SETTINGS["privacy"].update(data.model_dump())
-    return PrivacySettingsRead(**_LITE_SETTINGS["privacy"])
+    _get_org_settings(organization_id)["privacy"].update(data.model_dump())
+    return PrivacySettingsRead(**_get_org_settings(organization_id)["privacy"])
 
 
-def get_drone_checklist(session: Session) -> DroneChecklistRead:
+def get_drone_checklist(session: Session, organization_id: int) -> DroneChecklistRead:
     _ = session
-    return DroneChecklistRead(**_LITE_SETTINGS["drone"])
+    return DroneChecklistRead(**_get_org_settings(organization_id)["drone"])
 
 
-def update_drone_checklist(session: Session, data: DroneChecklistUpdate) -> DroneChecklistRead:
+def update_drone_checklist(
+    session: Session, organization_id: int, data: DroneChecklistUpdate
+) -> DroneChecklistRead:
     _ = session
-    _LITE_SETTINGS["drone"].update(data.model_dump())
-    return DroneChecklistRead(**_LITE_SETTINGS["drone"])
+    _get_org_settings(organization_id)["drone"].update(data.model_dump())
+    return DroneChecklistRead(**_get_org_settings(organization_id)["drone"])
 
 
-def get_subscription(session: Session) -> SubscriptionRead:
-    org = _first_organization(session)
-    users = list(session.exec(select(User).where(User.organization_id == org.id)))
+def get_subscription(session: Session, organization_id: int) -> SubscriptionRead:
+    users = list(session.exec(select(User).where(User.organization_id == organization_id)))
     n = len(users)
     return SubscriptionRead(
         plan_name="Academy",
@@ -868,3 +842,4 @@ def submit_demo_request(payload: DemoRequestCreate) -> DemoRequestResponse:
     """Demo talebini kaydet (MVP: yanıt üretir; kalıcı kuyruk yok)."""
     _ = payload
     return DemoRequestResponse(status="received", reference=f"DEMO-{token_hex(4).upper()}")
+

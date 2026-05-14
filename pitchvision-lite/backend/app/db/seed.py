@@ -10,44 +10,13 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 
-import bcrypt
-from sqlmodel import Session, select
-
-from app.models import (
-    Clip,
-    DrillRecommendation,
-    Match,
-    Organization,
-    Player,
-    PlayerMatchPerformance,
-    Report,
-    ScoutNote,
-    TacticalAlert,
-    TacticalMetric,
-    Team,
-    User,
-    VideoAsset,
-)
-from app.models.enums import (
-    AlertStatus,
-    AlertType,
-    DrillDifficulty,
-    MatchStatus,
-    MetricType,
-    PitchSize,
-    ProblemType,
-    ReportType,
-    Severity,
-    UserRole,
-    VideoAssetStatus,
-    VideoSource,
-)
+from app.core.security import hash_password
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 def _hash(plain: str) -> str:
-    return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
+    return hash_password(plain)
 
 
 def _dt(*args: int) -> datetime:
@@ -98,7 +67,15 @@ def seed_demo_data(session: Session) -> None:
         session.refresh(t)
 
     # ── Users ─────────────────────────────────────────────────────────────────
-    admin = User(
+    admin_user = User(
+        email="admin@anadolu-akademi.demo",
+        full_name="Ahmet Yönetici",
+        hashed_password=_hash("demo12345"),
+        role=UserRole.ADMIN,
+        organization_id=org.id,
+        is_active=True,
+    )
+    coach_user = User(
         email=DEMO_EMAIL,
         full_name="Mehmet Antrenör",
         hashed_password=_hash("demo12345"),
@@ -114,11 +91,20 @@ def seed_demo_data(session: Session) -> None:
         organization_id=org.id,
         is_active=True,
     )
-    for u in (admin, scout_user):
+    analyst_user = User(
+        email="analyst@anadolu-akademi.demo",
+        full_name="Caner Analist",
+        hashed_password=_hash("demo12345"),
+        role=UserRole.ANALYST,
+        organization_id=org.id,
+        is_active=True,
+    )
+    for u in (admin_user, coach_user, scout_user, analyst_user):
         session.add(u)
     session.commit()
-    for u in (admin, scout_user):
+    for u in (admin_user, coach_user, scout_user, analyst_user):
         session.refresh(u)
+
 
 
     # ── Players ───────────────────────────────────────────────────────────────

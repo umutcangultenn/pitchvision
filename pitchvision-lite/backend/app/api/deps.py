@@ -1,31 +1,54 @@
-from fastapi import Depends, Header, HTTPException, status
-from sqlmodel import Session, select
+"""
+API dependencies — authentication and authorization.
 
-from app.core.security import decode_mock_token
+Phase 2: Real JWT validation. No fallback to first user.
+"""
+
+from __future__ import annotations
+
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError
+from sqlmodel import Session
+
+from app.core.security import decode_access_token
 from app.db.session import get_session
 from app.models import User
 
+_bearer = HTTPBearer(auto_error=False)
+
+_401 = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Geçerli bir kimlik doğrulama token'ı gerekli.",
+    headers={"WWW-Authenticate": "Bearer"},
+)
+
 
 def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     session: Session = Depends(get_session),
-    authorization: str | None = Header(default=None),
 ) -> User:
-    if not authorization:
-        # Demo kolaylığı: ilk kullanıcıyı fallback olarak kullan.
-        user = session.exec(select(User).order_by(User.id)).first()
-        if user:
-            return user
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Kullanıcı bulunamadı.")
+    """
+    Validate Bearer JWT and return the authenticated User.
 
-    if not authorization.lower().startswith("bearer "):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Geçersiz token.")
+    Raises HTTP 401 for:
+    - Missing Authorization header
+    - Invalid / malformed token
+    - Expired token
+    - User not found in DB
+    - Inactive user
+    """
+    if credentials is None:
+        raise _401
 
-    token = authorization.split(" ", maxsplit=1)[1]
-    user_id = decode_mock_token(token)
-    if user_id is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token çözümlenemedi.")
+    try:
+        payload = decode_access_token(credentials.credentials)
+    except JWTError:
+        raise _401
 
+    user_id = int(payload.sub)
     user = session.get(User, user_id)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Kullanıcı bulunamadı.")
+    if user is None or not user.is_active:
+        raise _401
+
     return user

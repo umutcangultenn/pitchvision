@@ -6,19 +6,19 @@ from app.db.session import get_session
 from app.models import User
 from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse
 from app.schemas.user import UserRead
-from app.services import api_service
+from app.services import auth_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=TokenResponse)
 def register(payload: RegisterRequest, session: Session = Depends(get_session)) -> TokenResponse:
-    return api_service.register(session, payload)
+    return auth_service.register(session, payload)
 
 
 @router.post("/login", response_model=TokenResponse)
 def login(payload: LoginRequest, session: Session = Depends(get_session)) -> TokenResponse:
-    return api_service.login(session, payload)
+    return auth_service.login(session, payload)
 
 
 @router.get("/me", response_model=UserRead)

@@ -4,6 +4,8 @@ from typing import List
 from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_INSECURE_KEY = "dev-secret-change-me"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -15,8 +17,12 @@ class Settings(BaseSettings):
 
     app_name: str = Field(default="PitchVision Lite API", alias="APP_NAME")
     debug: bool = Field(default=False, alias="DEBUG")
-    secret_key: str = Field(default="dev-secret-change-me", alias="SECRET_KEY")
+    secret_key: str = Field(default=_INSECURE_KEY, alias="SECRET_KEY")
+
+    # JWT
+    jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
     access_token_expire_minutes: int = Field(default=60, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
+    refresh_token_expire_days: int = Field(default=7, alias="REFRESH_TOKEN_EXPIRE_DAYS")
 
     database_url: str = Field(
         default="postgresql+psycopg2://pitchvision:pitchvision@localhost:5432/pitchvision",
@@ -51,7 +57,16 @@ class Settings(BaseSettings):
             return ["*"]
         return [o.strip() for o in raw.split(",") if o.strip()]
 
+    def validate_secret_key(self) -> None:
+        """Call on startup. Rejects insecure default key in production."""
+        if not self.debug and self.secret_key == _INSECURE_KEY:
+            raise RuntimeError(
+                "SECRET_KEY is set to the insecure default value. "
+                "Set a strong random SECRET_KEY in production (DEBUG=false)."
+            )
+
 
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+

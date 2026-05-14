@@ -124,7 +124,7 @@ export default function MatchesPage() {
               <option value="all" className="bg-[#0a0f0d]">
                 Yaş: Tümü
               </option>
-              {Array.from(new Set(mockMatches.map((m) => m.ageCategory))).map((a) => (
+              {Array.from(new Set((allMatches ?? []).map((m) => m.ageCategory))).map((a) => (
                 <option key={a} value={a} className="bg-[#0a0f0d]">
                   {a}
                 </option>
