@@ -6,6 +6,10 @@ from .analysis import Analysis, AnalysisCreate, AnalysisRead, AnalysisStatus
 from .tactical_alert import TacticalAlert, TacticalAlertCreate, TacticalAlertRead, AlertSeverity
 from .player_metric import PlayerMetric, PlayerMetricCreate, PlayerMetricRead
 from .training_suggestion import TrainingSuggestion, TrainingSuggestionCreate, TrainingSuggestionRead
+from .match_segment import MatchSegment, MatchSegmentCreate, MatchSegmentRead, SegmentLabel
+from .engine_event import EngineEvent, EngineEventCreate, EngineEventRead, EngineEventReview, EngineEventType, AnalystVerdict
+from .analyst_event import AnalystEvent, AnalystEventCreate, AnalystEventRead, AnalystEventUpdate, EventTag, AnalystConfidence, ValidationStatus
+from .comparison_result import ComparisonResult, ComparisonResultRead, ComparisonDetailRead
 
 __all__ = [
     "User", "UserCreate", "UserRead", "UserUpdate",
@@ -16,4 +20,11 @@ __all__ = [
     "TacticalAlert", "TacticalAlertCreate", "TacticalAlertRead", "AlertSeverity",
     "PlayerMetric", "PlayerMetricCreate", "PlayerMetricRead",
     "TrainingSuggestion", "TrainingSuggestionCreate", "TrainingSuggestionRead",
+    # --- Tactical Engine Upgrade models ---
+    "MatchSegment", "MatchSegmentCreate", "MatchSegmentRead", "SegmentLabel",
+    "EngineEvent", "EngineEventCreate", "EngineEventRead", "EngineEventReview",
+    "EngineEventType", "AnalystVerdict",
+    "AnalystEvent", "AnalystEventCreate", "AnalystEventRead", "AnalystEventUpdate",
+    "EventTag", "AnalystConfidence", "ValidationStatus",
+    "ComparisonResult", "ComparisonResultRead", "ComparisonDetailRead",
 ]

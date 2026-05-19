@@ -30,13 +30,38 @@ class Settings(BaseSettings):
     MINIO_USE_SSL: bool = False
     
     # CV Pipeline
-    CV_MOCK_MODE: bool = True
+    CV_MOCK_MODE: bool = False  # Production: use real video processing
     CV_MODEL_PATH: str = "/models/yolov8n.pt"
     FFMPEG_PATH: str = "/usr/bin/ffmpeg"
-    
+
     # File Upload
     UPLOAD_DIR: str = "./uploads"
-    
+
+    # NVIDIA NIM API (Llama 3.1 70B)
+    NVIDIA_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
+    NVIDIA_API_KEY: str = "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"
+    NVIDIA_MODEL: str = "meta/llama-3.1-70b-instruct"
+    NVIDIA_TIMEOUT: int = 120  # seconds
+
+    # Engine — Field dimensions
+    FIELD_TYPE: str = "hali_saha"  # "hali_saha" or "full_pitch"
+    HALI_SAHA_LENGTH: float = 50.0  # meters
+    HALI_SAHA_WIDTH: float = 30.0  # meters
+    FULL_PITCH_LENGTH: float = 105.0
+    FULL_PITCH_WIDTH: float = 68.0
+    SEGMENT_DURATION_MINUTES: int = 15  # default segment size
+
+    # Engine — Detection thresholds
+    MOMENT_DETECTION_CONFIDENCE_THRESHOLD: float = 0.4
+    COMPARISON_TIME_WINDOW_SECONDS: float = 10.0
+
+    # AI Safety Rules
+    AI_DISCLAIMER: str = (
+        "Bu analiz otomatik olarak üretilmiştir ve kesin doğruluk iddiası taşımaz. "
+        "Nihai değerlendirme analist gözlemiyle birlikte yapılmalıdır."
+    )
+    AI_MAX_CONFIDENCE_CLAIM: float = 0.85  # Engine NEVER claims higher
+
     # Environment
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
