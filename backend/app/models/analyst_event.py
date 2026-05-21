@@ -63,7 +63,7 @@ class AnalystEvent(AnalystEventBase, table=True):
     validation_status: Optional[str] = None  # ValidationStatus value
 
     # Additional metadata
-    metadata: Optional[Dict[str, Any]] = Field(
+    event_metadata: Optional[Dict[str, Any]] = Field(
         default=None, sa_column=Column(JSON)
     )
 
@@ -76,7 +76,7 @@ class AnalystEventCreate(AnalystEventBase):
     segment_id: Optional[int] = None
     validates_engine_event_id: Optional[int] = None
     validation_status: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+    event_metadata: Optional[Dict[str, Any]] = None
 
 
 class AnalystEventRead(AnalystEventBase):
@@ -96,4 +96,4 @@ class AnalystEventUpdate(SQLModel):
     notes: Optional[str] = None
     confidence: Optional[str] = None
     validation_status: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+    event_metadata: Optional[Dict[str, Any]] = None

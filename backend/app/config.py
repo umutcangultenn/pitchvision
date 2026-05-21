@@ -30,17 +30,17 @@ class Settings(BaseSettings):
     MINIO_USE_SSL: bool = False
     
     # CV Pipeline
-    CV_MOCK_MODE: bool = False  # Production: use real video processing
+    CV_MOCK_MODE: bool = False  # Set to False to use real YOLO detection
     CV_MODEL_PATH: str = "/models/yolov8n.pt"
     FFMPEG_PATH: str = "/usr/bin/ffmpeg"
 
     # File Upload
     UPLOAD_DIR: str = "./uploads"
 
-    # NVIDIA NIM API (Llama 3.1 70B)
+    # NVIDIA NIM API (GLM-5.1 with Reasoning)
     NVIDIA_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
-    NVIDIA_API_KEY: str = "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"
-    NVIDIA_MODEL: str = "meta/llama-3.1-70b-instruct"
+    NVIDIA_API_KEY: str = "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"
+    NVIDIA_MODEL: str = "z-ai/glm-5.1"
     NVIDIA_TIMEOUT: int = 120  # seconds
 
     # Engine — Field dimensions

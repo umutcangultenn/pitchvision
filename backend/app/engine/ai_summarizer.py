@@ -133,7 +133,7 @@ Amacımız analistin kendi kör noktalarını fark etmesine ve AI sisteminin sı
 async def _call_nvidia(prompt: str) -> str:
     """
     Make HTTP request to NVIDIA NIM API (OpenAI-compatible).
-    Uses Llama 3.1 70B Instruct model.
+    Uses GLM-5.1 model with reasoning capabilities.
     """
     url = f"{settings.NVIDIA_BASE_URL}/chat/completions"
     headers = {
@@ -148,8 +148,14 @@ async def _call_nvidia(prompt: str) -> str:
         ],
         "temperature": 0.3,
         "top_p": 0.9,
-        "max_tokens": 1024,
+        "max_tokens": 2048,
         "stream": False,
+        "extra_body": {
+            "chat_template_kwargs": {
+                "enable_thinking": True,
+                "clear_thinking": False
+            }
+        }
     }
 
     try:
