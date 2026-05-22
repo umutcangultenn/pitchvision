@@ -22,6 +22,13 @@ class PlayerBase(SQLModel):
     photo_url: Optional[str] = None
     notes: Optional[str] = None
 
+    # Development & scouting scores (0-10)
+    technical_score: Optional[float] = None
+    tactical_score: Optional[float] = None
+    physical_score: Optional[float] = None
+    decision_score: Optional[float] = None
+    development_velocity: Optional[float] = None  # score change per week
+
 
 class Player(PlayerBase, table=True):
     __tablename__ = "players"
@@ -57,3 +64,8 @@ class PlayerUpdate(SQLModel):
     weight: Optional[int] = None
     photo_url: Optional[str] = None
     notes: Optional[str] = None
+    technical_score: Optional[float] = None
+    tactical_score: Optional[float] = None
+    physical_score: Optional[float] = None
+    decision_score: Optional[float] = None
+    development_velocity: Optional[float] = None

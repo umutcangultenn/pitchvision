@@ -10,6 +10,10 @@ from .match_segment import MatchSegment, MatchSegmentCreate, MatchSegmentRead, S
 from .engine_event import EngineEvent, EngineEventCreate, EngineEventRead, EngineEventReview, EngineEventType, AnalystVerdict
 from .analyst_event import AnalystEvent, AnalystEventCreate, AnalystEventRead, AnalystEventUpdate, EventTag, AnalystConfidence, ValidationStatus
 from .comparison_result import ComparisonResult, ComparisonResultRead, ComparisonDetailRead
+from .scout_note import ScoutNote, ScoutNoteCreate, ScoutNoteRead
+from .drill_recommendation import DrillRecommendation, DrillRecommendationCreate, DrillRecommendationRead
+from .statsbomb_event import StatsBombEvent, StatsBombEventCreate, StatsBombEventRead
+from .match_report import MatchReport, MatchReportCreate, MatchReportRead
 
 __all__ = [
     "User", "UserCreate", "UserRead", "UserUpdate",
@@ -27,4 +31,9 @@ __all__ = [
     "AnalystEvent", "AnalystEventCreate", "AnalystEventRead", "AnalystEventUpdate",
     "EventTag", "AnalystConfidence", "ValidationStatus",
     "ComparisonResult", "ComparisonResultRead", "ComparisonDetailRead",
+    # --- Phase 3 models ---
+    "ScoutNote", "ScoutNoteCreate", "ScoutNoteRead",
+    "DrillRecommendation", "DrillRecommendationCreate", "DrillRecommendationRead",
+    "StatsBombEvent", "StatsBombEventCreate", "StatsBombEventRead",
+    "MatchReport", "MatchReportCreate", "MatchReportRead",
 ]

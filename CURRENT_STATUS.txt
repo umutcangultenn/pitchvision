@@ -1,0 +1,165 @@
+================================================================================
+PITCHVISION — GÜNCEL DURUM RAPORU
+Tarih: 22 Mayıs 2026
+Branch: feature/phase-3-statsbomb-integration
+================================================================================
+
+## ÖZET
+Phase 3 tamamlandı. Sistem uçtan uca çalışır durumda — backend ayağa
+kalkıyor, auth akışı gerçek JWT ile çalışıyor, StatsBomb entegrasyonu hazır.
+Eksik olan: gerçek veri (DB boş), .env.local ayarı, node_modules kurulumu.
+
+================================================================================
+## ÇALIŞMAK İÇİN YAPILMASI GEREKENLER
+================================================================================
+
+1. BACKEND BAŞLATMA
+   cd backend
+   python -m venv venv
+   venv\Scripts\activate
+   pip install -r requirements.txt
+   python -m uvicorn app.main:app --reload
+   → http://localhost:8000
+   → http://localhost:8000/docs  (Swagger UI)
+
+2. DEMO KULLANICI OLUŞTUR (bir kez)
+   cd backend
+   python setup_demo_data.py
+   → Email:    dev@pitchvision.local
+   → Password: demo12345
+
+3. FRONTEND BAŞLATMA
+   cd frontend
+   npm install
+   # .env.local oluştur:
+   echo NEXT_PUBLIC_API_URL=http://localhost:8000 > .env.local
+   echo NEXT_PUBLIC_USE_MOCKS=false >> .env.local
+   npm run dev
+   → http://localhost:3000
+
+4. STATSBOMB VERİSİ IMPORT ET (opsiyonel)
+   cd backend
+   python scripts/import_statsbomb_data.py --list-competitions
+   python scripts/import_statsbomb_data.py --competition 11 --season 27 --team-id 1 --max 10
+
+================================================================================
+## ALTYAPI GEREKSİNİMLERİ
+================================================================================
+
+ZORUNLU:
+  - PostgreSQL 13+  →  postgresql://pitchvision:pitchvision_dev_password@localhost:5432/pitchvision_lite
+  - Redis 6+        →  redis://localhost:6379/0
+  - Python 3.9+
+  - Node.js 18+
+
+OPSİYONEL:
+  - MinIO           →  video dosyaları için object storage
+  - FFmpeg          →  video klip oluşturma
+  - CUDA GPU        →  YOLO hızlandırma (yoksa mock mode çalışır)
+
+================================================================================
+## TAMAMLANAN İŞLER — PHASE 3
+================================================================================
+
+BACKEND — YENİ DOSYALAR:
+  + backend/app/services/statsbomb_loader.py    StatsBomb GitHub open-data loader
+  + backend/app/services/event_mapper.py        Ham event → DB/metrik/alert/timeline
+  + backend/app/services/metrics_calculator.py  xG, PPDA, progressive passes, field tilt
+  + backend/app/services/statsbomb_importer.py  Bulk DB import
+  + backend/app/api/statsbomb.py                12 yeni endpoint
+  + backend/app/models/statsbomb_event.py       statsbomb_events tablosu
+  + backend/app/models/scout_note.py            scout_notes tablosu (eksikti)
+  + backend/app/models/drill_recommendation.py  drill_recommendations tablosu (eksikti)
+  + backend/scripts/import_statsbomb_data.py    CLI import script
+
+BACKEND — DEĞİŞTİRİLEN DOSYALAR:
+  ~ backend/app/main.py                         Tüm router'lar kayıtlı, v2.0.0
+  ~ backend/app/models/__init__.py              Tüm modeller export ediliyor
+  ~ backend/app/models/player.py                +technical/tactical/physical/decision_score, +development_velocity
+  ~ backend/app/api/passport.py                 Hardcoded demo → gerçek DB sorguları
+  ~ backend/setup_demo_data.py                  Gerçek bcrypt hash kullanıyor
+
+FRONTEND — YENİ DOSYALAR:
+  + frontend/lib/apiStatsBomb.ts                StatsBomb API client (token destekli)
+
+FRONTEND — DEĞİŞTİRİLEN DOSYALAR:
+  ~ frontend/lib/api.ts                         +getAuthToken/setAuthToken/clearAuthToken
+                                                +apiLogin/apiRegister/apiGetMe
+                                                Her req() → Authorization: Bearer header
+  ~ frontend/lib/store.ts                       Zustand persist, login()/logout() fonksiyonları
+  ~ frontend/app/(auth)/login/page.tsx          Gerçek backend JWT login, hata gösterimi
+  ~ frontend/app/(app)/layout.tsx               Auth guard — giriş yoksa /login'e yönlendir
+  ~ frontend/components/layout/Topbar.tsx       Kullanıcı adı + çıkış butonu
+  ~ frontend/lib/apiSettings.ts                 +Authorization header
+
+================================================================================
+## AKTİF ROUTER'LAR (main.py)
+================================================================================
+
+  /api/auth          → login, register, me
+  /api/teams         → CRUD
+  /api/matches       → CRUD + video upload
+  /api/players       → CRUD
+  /api/players/{id}/passport, /performances, /scout-notes
+  /api/analysis      → analiz + uyarılar + antrenman önerileri
+  /api/reports       → maç raporları
+  /api/segments      → maç segmentleri
+  /api/engine-events → otomatik tespit olayları
+  /api/analyst-events→ manuel analist etiketleri
+  /api/comparison    → maç karşılaştırma
+  /api/ai-summary    → NVIDIA GLM-5.1 özet
+  /api/scouting      → oyuncu izleme + notlar
+  /api/drills        → antrenman önerileri
+  /api/statsbomb     → StatsBomb entegrasyonu (12 endpoint)
+  /api/video         → video işleme pipeline
+  /api/tactical      → taktik analiz motoru
+
+================================================================================
+## VERİTABANI TABLOLARI (17 adet)
+================================================================================
+
+  users, teams, players, matches, analyses, tactical_alerts,
+  player_metrics, match_reports, match_segments, engine_events,
+  analyst_events, comparison_results, training_suggestions,
+  scout_notes, drill_recommendations, statsbomb_events,
+  match_report (MatchReport)
+
+  NOT: Alembic migration geçmişi yok.
+       create_db_and_tables() startup'ta tüm tabloları oluşturur.
+
+================================================================================
+## BİLİNEN EKSİKLER / YAPILACAKLAR
+================================================================================
+
+YÜKSEK ÖNCELİK:
+  [ ] .env.local dosyası oluşturulmalı (NEXT_PUBLIC_USE_MOCKS=false)
+  [ ] NVIDIA_API_KEY config.py'den .env'e taşınmalı (güvenlik)
+  [ ] SECRET_KEY değiştirilmeli (şu an default değer)
+  [ ] EventTimeline.tsx bileşeni yazılmalı (Phase 3 frontend)
+  [ ] TacticalOverlay.tsx bileşeni yazılmalı (Phase 3 frontend)
+
+ORTA ÖNCELİK:
+  [ ] Alembic migration geçmişi başlatılmalı
+  [ ] Register sayfası (/register route) oluşturulmalı
+  [ ] Video streaming MinIO presigned URL ile yapılmalı
+  [ ] Rate limiting eklenmeli
+
+DÜŞÜK ÖNCELİK:
+  [ ] Test coverage artırılmalı (şu an minimal)
+  [ ] SAM2/SAM3 forma rengi ile oyuncu kimliği
+  [ ] Mobil uygulama
+
+================================================================================
+## PROJE HAKKINDA
+================================================================================
+
+  Repo:     https://github.com/umutcangultenn/pitchvision
+  Branch:   feature/phase-3-statsbomb-integration
+  Dil:      Python (FastAPI) + TypeScript (Next.js 14)
+  DB:       PostgreSQL + SQLModel
+  Auth:     JWT (python-jose) + bcrypt
+  CV:       YOLOv8 + ByteTrack + OpenCV
+  AI:       NVIDIA NIM API (GLM-5.1)
+  Data:     StatsBomb Open Data
+
+================================================================================

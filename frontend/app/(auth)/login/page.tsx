@@ -2,16 +2,50 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-
 import Link from "next/link";
 
 import { useAuthStore } from "@/lib/store";
+import { apiLogin } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { setAuthenticated } = useAuthStore();
-  const [email, setEmail] = useState("coach@anadolu-akademi.demo");
+  const { login } = useAuthStore();
+
+  const [email, setEmail] = useState("dev@pitchvision.local");
   const [password, setPassword] = useState("demo12345");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    const result = await apiLogin(email, password);
+
+    if (result.ok) {
+      login(result.data.access_token, result.data.user);
+      router.push("/dashboard");
+    } else {
+      // Backend'e ulaşılamıyorsa mock login ile devam et
+      if (result.error.status === "network") {
+        console.warn("Backend ulaşılamıyor, mock login kullanılıyor");
+        login("mock-token", {
+          id: 1,
+          email,
+          full_name: "Demo Kullanıcı",
+          role: "coach",
+          is_active: true,
+          created_at: new Date().toISOString(),
+        });
+        router.push("/dashboard");
+      } else {
+        setError(result.error.message ?? "Giriş başarısız");
+      }
+    }
+
+    setLoading(false);
+  }
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-6">
@@ -19,17 +53,10 @@ export default function LoginPage() {
         <div className="text-sm font-semibold text-emerald-200/90">PitchVision Lite</div>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white">Giriş yap</h1>
         <p className="mt-2 text-sm text-text-muted">
-          MVP demo: Kimlik doğrulama mock olarak çalışır. (Sonra backend JWT bağlanacak.)
+          Backend çalışıyorsa gerçek JWT ile, yoksa mock modda devam eder.
         </p>
 
-        <form
-          className="mt-8 space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setAuthenticated(true);
-            router.push("/onboarding");
-          }}
-        >
+        <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
           <div>
             <label htmlFor="email" className="block text-xs font-medium text-text-muted">
               E-posta
@@ -42,6 +69,7 @@ export default function LoginPage() {
               className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-emerald-500/40"
               placeholder="ornek@kulup.com"
               autoComplete="email"
+              required
             />
           </div>
 
@@ -57,20 +85,32 @@ export default function LoginPage() {
               className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-emerald-500/40"
               placeholder="••••••••"
               autoComplete="current-password"
+              required
             />
           </div>
 
+          {error && (
+            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+              {error}
+            </div>
+          )}
+
           <button
             type="submit"
-            className="flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500"
+            disabled={loading}
+            className="flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-60"
           >
-            Devam et
+            {loading ? "Giriş yapılıyor…" : "Devam et"}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-text-muted">
-          Backend bağlantısı gelince gerçek login akışı eklenecek.
-          <Link href="/dashboard" className="ml-2 text-emerald-300 hover:underline">
+          Hesabın yok mu?{" "}
+          <Link href="/register" className="text-emerald-300 hover:underline">
+            Kayıt ol
+          </Link>
+          {" · "}
+          <Link href="/dashboard" className="text-emerald-300 hover:underline">
             Doğrudan panele git
           </Link>
         </p>
@@ -78,4 +118,3 @@ export default function LoginPage() {
     </main>
   );
 }
-

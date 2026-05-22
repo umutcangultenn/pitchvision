@@ -4,6 +4,7 @@
  */
 
 import { mockOrganizations, mockTeams } from "@/data/demo";
+import { getAuthToken } from "@/lib/api";
 
 const BASE =
   typeof process.env.NEXT_PUBLIC_API_URL === "string"
@@ -23,9 +24,14 @@ async function req<T>(path: string, options?: RequestInit & { body?: unknown }):
   if (USE_MOCKS) return null;
   try {
     const hasBody = options?.body !== undefined;
+    const token = getAuthToken();
     const res = await fetch(apiUrl(path), {
       ...options,
-      headers: { ...(hasBody ? { "Content-Type": "application/json" } : {}), ...options?.headers },
+      headers: {
+        ...(hasBody ? { "Content-Type": "application/json" } : {}),
+        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        ...options?.headers,
+      },
       body: hasBody ? JSON.stringify(options!.body) : undefined,
       cache: "no-store",
     });

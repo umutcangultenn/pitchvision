@@ -1,7 +1,19 @@
 """
-Setup demo data: user + team
-Run: python setup_demo_data.py
+Setup demo data: creates the default dev user + team.
+
+Run from backend/ directory:
+    python setup_demo_data.py
+
+Credentials created:
+    Email:    dev@pitchvision.local
+    Password: demo12345
 """
+import sys
+from pathlib import Path
+
+# Ensure app package is importable when run from backend/
+sys.path.insert(0, str(Path(__file__).parent))
+
 from sqlmodel import Session, create_engine, select
 from app.models.user import User
 from app.models.team import Team
@@ -10,33 +22,39 @@ from app.config import settings
 
 engine = create_engine(settings.DATABASE_URL)
 
-def setup_demo_data():
+
+def setup_demo_data() -> None:
     with Session(engine) as session:
-        # 1. Create or get demo user
-        existing_user = session.exec(select(User).where(User.email == "dev@pitchvision.local")).first()
-        
+        # ── User ──────────────────────────────────────────────────────────────
+        existing_user = session.exec(
+            select(User).where(User.email == "dev@pitchvision.local")
+        ).first()
+
         if existing_user:
-            print(f"✅ Demo user exists (ID: {existing_user.id})")
+            print(f"✅ Demo user already exists (ID: {existing_user.id})")
             user_id = existing_user.id
         else:
             demo_user = User(
                 email="dev@pitchvision.local",
                 full_name="Development User",
-                hashed_password="demo_hash",  # Simple hash for development
+                hashed_password=get_password_hash("demo12345"),
                 is_active=True,
-                role="coach"
+                role="coach",
+                organization="PitchVision Dev",
             )
             session.add(demo_user)
             session.commit()
             session.refresh(demo_user)
             user_id = demo_user.id
             print(f"✅ Demo user created (ID: {user_id})")
-        
-        # 2. Create or get demo team
-        existing_team = session.exec(select(Team).where(Team.name == "Anadolu Akademi")).first()
-        
+
+        # ── Team ──────────────────────────────────────────────────────────────
+        existing_team = session.exec(
+            select(Team).where(Team.name == "Anadolu Akademi")
+        ).first()
+
         if existing_team:
-            print(f"✅ Demo team exists (ID: {existing_team.id})")
+            print(f"✅ Demo team already exists (ID: {existing_team.id})")
         else:
             demo_team = Team(
                 name="Anadolu Akademi",
@@ -50,10 +68,10 @@ def setup_demo_data():
             session.commit()
             session.refresh(demo_team)
             print(f"✅ Demo team created (ID: {demo_team.id})")
-        
-        print("\n🎉 Demo data ready!")
-        print("   User: dev@pitchvision.local")
-        print("   Team: Anadolu Akademi (U15)")
+
+    print("\n🎉 Setup complete!")
+    print("   Login: dev@pitchvision.local / demo12345")
+
 
 if __name__ == "__main__":
     setup_demo_data()

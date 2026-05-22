@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import React from "react";
+import { useRouter } from "next/navigation";
 
 import { OrgTeamSeasonSelector } from "@/components/layout/OrgTeamSeasonSelector";
+import { useAuthStore } from "@/lib/store";
 
 function BellIcon() {
   return (
@@ -23,6 +25,14 @@ export function Topbar({
 }: {
   onHamburger: () => void;
 }) {
+  const router = useRouter();
+  const { user, logout } = useAuthStore();
+
+  function handleLogout() {
+    logout();
+    router.push("/login");
+  }
+
   return (
     <header className="sticky top-0 z-30 border-b border-white/10 bg-bg/70 backdrop-blur">
       <div className="flex items-center justify-between gap-4 px-4 py-3 md:px-6">
@@ -58,12 +68,28 @@ export function Topbar({
             <BellIcon />
             Bildirim
           </button>
-          <button className="hidden sm:inline-flex rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-text-muted hover:border-emerald-400/30 hover:text-white">
-            Yardım
-          </button>
-          <button className="hidden sm:inline-flex rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-text-muted hover:border-emerald-400/30 hover:text-white">
-            Profil
-          </button>
+
+          {/* User info + logout */}
+          {user ? (
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-text-muted">
+                {user.full_name}
+              </span>
+              <button
+                onClick={handleLogout}
+                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-text-muted hover:border-red-400/30 hover:text-red-300"
+              >
+                Çıkış
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="hidden sm:inline-flex rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-text-muted hover:border-emerald-400/30 hover:text-white"
+            >
+              Giriş
+            </Link>
+          )}
 
           <Link
             href="/matches/new"

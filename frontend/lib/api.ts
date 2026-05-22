@@ -51,6 +51,23 @@ function apiUrl(path: string): string {
 
 const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
+// ── Auth token helpers ────────────────────────────────────────────────────────
+
+const TOKEN_KEY = "pv_access_token";
+
+export function getAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setAuthToken(token: string): void {
+  if (typeof window !== "undefined") localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearAuthToken(): void {
+  if (typeof window !== "undefined") localStorage.removeItem(TOKEN_KEY);
+}
+
 // ── Core types ────────────────────────────────────────────────────────────────
 
 export type ApiResult<T> =
@@ -70,10 +87,12 @@ async function req<T>(
 ): Promise<ApiResult<T>> {
   try {
     const hasBody = options?.body !== undefined;
+    const token = getAuthToken();
     const res = await fetch(apiUrl(path), {
       ...options,
       headers: {
         ...(hasBody ? { "Content-Type": "application/json" } : {}),
+        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
         ...options?.headers,
       },
       body: hasBody ? JSON.stringify(options!.body) : undefined,
@@ -104,6 +123,64 @@ function ok<T>(data: T): ApiResult<T> {
 export async function apiHealth(): Promise<ApiResult<{ status: string }>> {
   if (USE_MOCKS) return ok({ status: "ok (mock)" });
   return req("/health");
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+export type AuthUser = {
+  id: number;
+  email: string;
+  full_name: string;
+  role: string;
+  organization?: string;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type LoginResponse = {
+  access_token: string;
+  token_type: string;
+  user: AuthUser;
+};
+
+export async function apiLogin(
+  email: string,
+  password: string,
+): Promise<ApiResult<LoginResponse>> {
+  // Backend uses OAuth2PasswordRequestForm (form-encoded, not JSON)
+  const body = new URLSearchParams({ username: email, password });
+  try {
+    const res = await fetch(apiUrl("/auth/login"), {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      let message = `HTTP ${res.status}`;
+      try { const j = await res.json(); message = j?.detail ?? message; } catch { /* ignore */ }
+      return { ok: false, data: null, error: { status: res.status, message } };
+    }
+    const data = (await res.json()) as LoginResponse;
+    return { ok: true, data, error: null };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Network error";
+    return { ok: false, data: null, error: { status: "network", message } };
+  }
+}
+
+export async function apiRegister(payload: {
+  email: string;
+  password: string;
+  full_name: string;
+  role?: string;
+  organization?: string;
+}): Promise<ApiResult<AuthUser>> {
+  return req<AuthUser>("/auth/register", { method: "POST", body: payload });
+}
+
+export async function apiGetMe(): Promise<ApiResult<AuthUser>> {
+  return req<AuthUser>("/auth/me");
 }
 
 // ── Matches ───────────────────────────────────────────────────────────────────
