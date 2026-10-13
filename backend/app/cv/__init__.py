@@ -1,33 +1,43 @@
-# Computer Vision Pipeline
+# Computer Vision Pipeline — v2
 
-from .detector import MockDetector, YOLODetector, get_detector
-from .tracker import SimpleTracker
 from .calibration import PitchCalibrator
-from .video_io import VideoProcessor, VideoUploadHandler, VideoMetadata, ProcessingProgress, ProcessingStatus
-from .pipeline import MatchAnalysisPipeline, PipelineConfig, ProcessingResult, create_processing_pipeline
+from .detector import (
+    DetectorConfig,
+    MockDetector,
+    YOLODetector,
+    build_detector,
+)
+from .tracker import (
+    TrackerConfig,
+    ByteTracker,
+    SimpleIoUTracker,
+    build_tracker,
+)
+from .pipeline import (
+    PipelineConfig,
+    CVPipeline,
+    VideoInfo,
+    BenchmarkResult,
+    read_video_info,
+)
 
 __all__ = [
-    # Detection
-    "MockDetector",
-    "YOLODetector", 
-    "get_detector",
-    
-    # Tracking
-    "SimpleTracker",
-    
     # Calibration
     "PitchCalibrator",
-    
-    # Video I/O
-    "VideoProcessor",
-    "VideoUploadHandler",
-    "VideoMetadata",
-    "ProcessingProgress",
-    "ProcessingStatus",
-    
+    # Detection
+    "DetectorConfig",
+    "MockDetector",
+    "YOLODetector",
+    "build_detector",
+    # Tracking
+    "TrackerConfig",
+    "ByteTracker",
+    "SimpleIoUTracker",
+    "build_tracker",
     # Pipeline
-    "MatchAnalysisPipeline",
     "PipelineConfig",
-    "ProcessingResult",
-    "create_processing_pipeline"
+    "CVPipeline",
+    "VideoInfo",
+    "BenchmarkResult",
+    "read_video_info",
 ]

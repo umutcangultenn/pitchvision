@@ -10,8 +10,10 @@ import json
 from sqlmodel import Session, create_engine, select
 
 from app.config import settings
-from app.cv.detector import get_detector
-from app.cv.tracker import SimpleTracker
+from app.cv.pipeline import CVPipeline, PipelineConfig
+from app.cv.detector import DetectorConfig
+from app.cv.tracker import TrackerConfig
+from app.cv.calibration import PitchCalibrator
 from app.analytics.metrics import TacticalMetricsCalculator
 from app.analytics.alerts import TacticalAlertGenerator
 from app.analytics.training import TrainingSuggestionGenerator
@@ -38,74 +40,42 @@ engine = create_engine(settings.DATABASE_URL)
 
 
 def _run_cv_pipeline(match_id: int, video_path: str | None) -> list:
-    """
-    Run the CV pipeline on a video file.
-    
-    Uses real YOLO detection (football-specific model from Hugging Face)
-    or falls back to mock mode if YOLO is not available.
+    """Run the CV pipeline on a video file.
 
-    Returns a list of tracking frame dicts.
-    """
-    detector = get_detector()
-    tracker = SimpleTracker()
-    tracking_data = []
+    Uses the real YOLOv8 + ByteTrack pipeline when a valid video is provided,
+    otherwise falls back to 150 mock frames.
 
-    if video_path and CV2_AVAILABLE:
-        logger.info(f"Match {match_id}: processing video with {detector.__class__.__name__}")
-        try:
-            cap = cv2.VideoCapture(video_path)
-            if not cap.isOpened():
-                logger.warning(f"Could not open video: {video_path}, using mock mode")
-                # Fallback to mock
-                for i in range(100):
-                    detections = detector.detect_frame(None, i)
-                    tracked = tracker.update(detections)
-                    tracking_data.append(tracked)
-                return tracking_data
-            
-            frame_count = 0
-            fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
-            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            logger.info(f"Match {match_id}: Video info - FPS: {fps}, Total frames: {total_frames}")
-            
-            while True:
-                ret, frame = cap.read()
-                if not ret:
-                    break
-                
-                # Process every 5th frame to speed up (optional)
-                if frame_count % 5 == 0:
-                    detections = detector.detect_frame(frame, frame_count)
-                    tracked = tracker.update(detections)
-                    tracking_data.append(tracked)
-                    
-                    # Log progress every 50 frames
-                    if frame_count % 50 == 0:
-                        logger.info(f"Match {match_id}: Processed {frame_count}/{total_frames} frames")
-                
-                frame_count += 1
-                
-                # Limit to 500 frames for demo
-                if frame_count >= 500:
-                    logger.info(f"Match {match_id}: Reached frame limit (500)")
-                    break
-            
-            cap.release()
-            logger.info(f"Match {match_id}: ✓ Video processing complete - {frame_count} frames processed, {len(tracking_data)} tracking frames extracted")
-        except Exception as e:
-            logger.error(f"Video processing error: {e}, falling back to mock mode")
-            for i in range(100):
-                detections = detector.detect_frame(None, i)
-                tracked = tracker.update(detections)
-                tracking_data.append(tracked)
-    else:
-        # Mock mode or no video
-        logger.info(f"Match {match_id}: running in mock mode (100 synthetic frames)")
-        for i in range(100):
-            detections = detector.detect_frame(None, i)
-            tracked = tracker.update(detections)
-            tracking_data.append(tracked)
-    
+    Returns a list of tracked-frame dicts compatible with the analytics engine.
+    """
+    det_cfg = DetectorConfig(
+        model_weights  = settings.CV_MODEL_PATH if not settings.CV_MOCK_MODE else "mock",
+        device         = "auto",
+        imgsz          = 960,
+        conf           = 0.15,
+        iou            = 0.65,
+        max_det        = 100,
+        frame_interval = 5,  # every 5th frame — ~5 FPS equivalent for a 25 FPS source
+    )
+
+    pipeline_cfg = PipelineConfig(
+        detector       = det_cfg,
+        tracker        = TrackerConfig(frame_rate=25),
+        frame_interval = 5,
+        max_frames     = 500,   # ~20 s of gameplay per match for initial processing
+    )
+
+    pipeline = CVPipeline(pipeline_cfg)
+
+    if settings.CV_MOCK_MODE or not video_path:
+        logger.info(f"Match {match_id}: running in mock mode")
+        return pipeline._run_mock_fallback()
+
+    def _on_progress(done: int, total: int) -> None:
+        pct = min(100, int(done / max(total, 1) * 100))
+        logger.info(f"Match {match_id}: CV pipeline {pct}% ({done}/{total} frames)")
+
+    tracking_data = pipeline.process(video_path, on_progress=_on_progress)
+    logger.info(f"Match {match_id}: CV pipeline returned {len(tracking_data)} tracked frames")
     return tracking_data
 
 

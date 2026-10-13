@@ -1,24 +1,50 @@
+# ── Web framework ────────────────────────────────────────────────────────────
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+
+# ── Database & ORM ───────────────────────────────────────────────────────────
 sqlmodel==0.0.14
 alembic==1.13.1
 psycopg2-binary==2.9.9
 pydantic==2.5.3
 pydantic-settings==2.1.0
-python-multipart==0.0.6
+
+# ── Auth ─────────────────────────────────────────────────────────────────────
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+
+# ── Background jobs & cache ───────────────────────────────────────────────────
 redis==5.0.1
 rq==1.16.1
+
+# ── Storage ──────────────────────────────────────────────────────────────────
 minio==7.2.3
-opencv-python-headless==4.9.0.80
-numpy>=1.26.0
-pandas>=2.2.0
-pillow>=10.3.0
+
+# ── CV & ML ──────────────────────────────────────────────────────────────────
+# opencv-python-headless for server environments (no GUI deps)
+opencv-python-headless==4.10.0.84
+numpy==1.26.4
+scikit-learn==1.5.2
+
+# Ultralytics YOLOv8 — pin to a tested version
+ultralytics==8.3.0
+
+# supervision — ByteTrack + annotation utilities
+# NOTE: Check installed version before upgrading; API may change between minor versions
+supervision==0.25.1
+
+# PyTorch: install the appropriate variant for your hardware SEPARATELY.
+# CPU-only:  pip install torch==2.3.1 torchvision==0.18.1 --index-url https://download.pytorch.org/whl/cpu
+# CUDA 12.1: pip install torch==2.3.1 torchvision==0.18.1 --index-url https://download.pytorch.org/whl/cu121
+# Apple MPS: pip install torch==2.3.1 torchvision==0.18.1  (standard index, MPS auto-detected)
+# torch and torchvision are NOT listed here to avoid pip installing the wrong CUDA variant.
+
+# ── Data processing ───────────────────────────────────────────────────────────
+pandas==2.2.0
+pillow==10.3.0
 python-dateutil==2.8.2
 httpx==0.26.0
-scikit-learn>=1.4.0
+
+# ── Video download (optional) ────────────────────────────────────────────────
 yt-dlp==2024.5.27
-ultralytics>=8.0.0
-torch>=2.0.0
-torchvision>=0.15.0

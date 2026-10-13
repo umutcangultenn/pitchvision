@@ -10,8 +10,8 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
     
-    # Security
-    SECRET_KEY: str = "your-secret-key-change-in-production"
+    # Security — NEVER commit a real secret here; set SECRET_KEY in .env
+    SECRET_KEY: str = "dev-secret-change-me-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
@@ -37,9 +37,9 @@ class Settings(BaseSettings):
     # File Upload
     UPLOAD_DIR: str = "./uploads"
 
-    # NVIDIA NIM API (GLM-5.1 with Reasoning)
+    # NVIDIA NIM API — load from .env, never hardcode here
     NVIDIA_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
-    NVIDIA_API_KEY: str = "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"
+    NVIDIA_API_KEY: str = ""  # Set in .env: NVIDIA_API_KEY=nvapi-...
     NVIDIA_MODEL: str = "z-ai/glm-5.1"
     NVIDIA_TIMEOUT: int = 120  # seconds
 

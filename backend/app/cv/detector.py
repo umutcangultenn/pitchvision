@@ -1,252 +1,318 @@
-import numpy as np
-from typing import List, Dict, Any, Tuple, Optional
-from app.config import settings
-import random
+"""
+Player / ball detector — YOLOv8 with configurable model and device selection.
+
+Supports:
+  - YOLOv8n / YOLOv8s / YOLOv8m (configurable)
+  - CPU, CUDA, Apple MPS (auto-detected or explicit)
+  - FP16 inference when backend supports it
+  - Graceful fallback to mock mode when YOLO is unavailable
+  - Frame-level benchmarking hooks
+"""
+from __future__ import annotations
+
 import logging
+import random
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# Try to import OpenCV
+# ── Optional imports (graceful fallback) ──────────────────────────────────────
+
 try:
-    import cv2
+    import cv2  # noqa: F401
     CV2_AVAILABLE = True
 except ImportError:
     CV2_AVAILABLE = False
-    logger.warning("OpenCV not available, using mock mode")
+    logger.warning("OpenCV not available; mock mode only.")
 
-# Try to import YOLO
 try:
     from ultralytics import YOLO
     YOLO_AVAILABLE = True
 except ImportError:
     YOLO_AVAILABLE = False
-    logger.warning("Ultralytics YOLO not available")
+    logger.warning("Ultralytics YOLO not available; falling back to mock mode.")
 
 
-class MockDetector:
-    """Mock detector for demo purposes - generates realistic player positions"""
-    
-    def __init__(self):
-        self.frame_width = 1920
-        self.frame_height = 1080
-        self.num_players_home = 11
-        self.num_players_away = 11
-        self.ball_position = [self.frame_width // 2, self.frame_height // 2]
-        
-    def detect_frame(self, frame: np.ndarray, frame_idx: int) -> Dict[str, Any]:
-        """
-        Detect players and ball in a frame
-        Returns mock detection data with realistic movement
-        """
-        detections = {
-            "frame_idx": frame_idx,
-            "timestamp": frame_idx / 25.0,  # Assuming 25 FPS
-            "players_home": [],
-            "players_away": [],
-            "ball": None,
-            "referee": []
-        }
-        
-        # Generate home team players (blue)
-        for i in range(self.num_players_home):
-            x = random.randint(100, self.frame_width - 100)
-            y = random.randint(100, self.frame_height - 100)
-            detections["players_home"].append({
-                "id": i + 1,
-                "bbox": [x - 20, y - 40, x + 20, y + 40],
-                "confidence": random.uniform(0.85, 0.99),
-                "position": [x, y]
-            })
-        
-        # Generate away team players (red)
-        for i in range(self.num_players_away):
-            x = random.randint(100, self.frame_width - 100)
-            y = random.randint(100, self.frame_height - 100)
-            detections["players_away"].append({
-                "id": i + 1,
-                "bbox": [x - 20, y - 40, x + 20, y + 40],
-                "confidence": random.uniform(0.85, 0.99),
-                "position": [x, y]
-            })
-        
-        # Generate ball position with some movement
-        self.ball_position[0] += random.randint(-50, 50)
-        self.ball_position[1] += random.randint(-50, 50)
-        self.ball_position[0] = max(50, min(self.frame_width - 50, self.ball_position[0]))
-        self.ball_position[1] = max(50, min(self.frame_height - 50, self.ball_position[1]))
-        
-        detections["ball"] = {
-            "bbox": [
-                self.ball_position[0] - 10,
-                self.ball_position[1] - 10,
-                self.ball_position[0] + 10,
-                self.ball_position[1] + 10
-            ],
-            "confidence": random.uniform(0.75, 0.95),
-            "position": self.ball_position.copy()
-        }
-        
-        return detections
+# ── Configuration ─────────────────────────────────────────────────────────────
 
+@dataclass
+class DetectorConfig:
+    """All detection parameters in one place — pass around instead of globals."""
+
+    # Model
+    model_weights: str = "yolov8n.pt"    # path or weights name
+    device: str = "auto"                 # "auto" | "cpu" | "cuda" | "mps" | "0"
+
+    # Inference
+    imgsz: int   = 960       # inference image size
+    conf:  float = 0.15      # confidence threshold (lower = more detections)
+    iou:   float = 0.65      # NMS IoU threshold
+    max_det: int = 100       # maximum detections per frame
+    half: bool   = False     # FP16 (set True only for CUDA / validated backends)
+
+    # Class filtering
+    # None = no filter (use all classes from the model)
+    # [0] = COCO person class for generic yolov8*.pt weights
+    # Adjust when using a football-specific model with custom classes
+    classes: list[int] | None = field(default_factory=lambda: [0])
+
+    # Frame sampling (1 = every frame; 2 = every other frame, etc.)
+    frame_interval: int = 1
+
+    # Verbose YOLO logging
+    verbose: bool = False
+
+
+# ── Detection output schema ───────────────────────────────────────────────────
+
+def _make_frame_result(frame_idx: int, fps: float = 25.0) -> dict[str, Any]:
+    """Empty detection result template for a single frame."""
+    return {
+        "frame_idx":    frame_idx,
+        "timestamp":    frame_idx / fps,
+        "detections":   [],      # list of detection dicts (unified, no team label yet)
+        "players_home": [],      # populated after team classification
+        "players_away": [],      # populated after team classification
+        "ball":         None,
+        "referee":      [],
+    }
+
+
+def _detection_dict(
+    bbox: list[float],
+    confidence: float,
+    class_id: int,
+    track_id: int | None = None,
+) -> dict[str, Any]:
+    """Canonical detection dict shared by all code paths."""
+    x1, y1, x2, y2 = bbox
+    return {
+        "bbox":       [x1, y1, x2, y2],          # xyxy pixel coords
+        "confidence": round(float(confidence), 4),
+        "class_id":   int(class_id),
+        "track_id":   track_id,
+        # Convenience: bottom-centre ground contact point in pixel space
+        "ground_px":  [(x1 + x2) / 2.0, float(y2)],
+        "center_px":  [(x1 + x2) / 2.0, (y1 + y2) / 2.0],
+    }
+
+
+# ── Device helpers ────────────────────────────────────────────────────────────
+
+def _resolve_device(requested: str) -> str:
+    """Resolve 'auto' to the best available device string."""
+    if requested != "auto":
+        return requested
+
+    try:
+        import torch
+        if torch.cuda.is_available():
+            return "cuda"
+        # Apple Silicon MPS
+        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            return "mps"
+    except ImportError:
+        pass
+
+    return "cpu"
+
+
+# ── Real YOLO detector ────────────────────────────────────────────────────────
 
 class YOLODetector:
-    """Real YOLO detector for football player detection"""
-    
-    def __init__(self, model_name: str = "aabyzov/easychamp-player-detection-yolov8"):
-        """
-        Initialize YOLO detector with football-specific model from Hugging Face
-        
-        Args:
-            model_name: Hugging Face model identifier
-        """
+    """Wraps Ultralytics YOLO for football player detection.
+
+    The model is loaded once and reused for every frame — never reinitialised
+    between frames.
+
+    Args:
+        config: DetectorConfig instance.
+    """
+
+    def __init__(self, config: DetectorConfig) -> None:
         if not YOLO_AVAILABLE:
-            raise RuntimeError("Ultralytics YOLO not installed. Install with: pip install ultralytics")
-        
-        self.model_name = model_name
-        self.model = None
-        self.frame_width = 1920
-        self.frame_height = 1080
-        
+            raise RuntimeError(
+                "ultralytics is not installed. Run: pip install ultralytics"
+            )
+
+        self.config = config
+        self._device = _resolve_device(config.device)
+        self._model: Any = None
+        self._fps:   float = 25.0  # updated by caller when video FPS is known
+
+        logger.info("Loading YOLO model: %s on %s", config.model_weights, self._device)
+        self._load_model()
+
+    def _load_model(self) -> None:
+        """Load (or download) the YOLO model weights."""
+        weights = self.config.model_weights
+        weights_path = Path(weights)
+
+        # If it looks like a local path and does not exist, warn but continue
+        # (Ultralytics will download standard weights automatically).
+        if weights_path.suffix in {".pt", ".onnx"} and not weights_path.exists():
+            logger.warning(
+                "Weights file not found locally: %s — Ultralytics will attempt download.",
+                weights_path,
+            )
+
         try:
-            logger.info(f"Loading YOLO model from Hugging Face: {model_name}")
-            # Try to load from Hugging Face using the correct format
-            # Format: https://huggingface.co/{user}/{model}/resolve/main/best.pt
-            model_url = f"https://huggingface.co/{model_name}/resolve/main/best.pt"
-            self.model = YOLO(model_url)
-            logger.info("YOLO model loaded successfully from Hugging Face")
-        except Exception as e:
-            logger.warning(f"Failed to load from Hugging Face: {e}")
-            logger.info("Trying to load default YOLOv8 model...")
-            try:
-                # Fallback to default YOLOv8 model
-                self.model = YOLO("yolov8n.pt")
-                logger.info("Default YOLOv8 model loaded (will download on first use)")
-            except Exception as e2:
-                logger.error(f"Failed to load default model: {e2}")
-                logger.info("Will use mock detector as fallback")
-                self.model = None
-    
-    def detect_frame(self, frame: np.ndarray, frame_idx: int) -> Dict[str, Any]:
-        """
-        Detect players, ball, and referees in a frame using YOLO
-        
+            self._model = YOLO(weights)
+            # Warm-up: run once on a tiny dummy image to initialise CUDA kernels
+            dummy = np.zeros((32, 32, 3), dtype=np.uint8)
+            self._model(dummy, device=self._device, verbose=False)
+            logger.info("YOLO model ready: %s", weights)
+        except Exception as exc:
+            logger.error("Failed to load YOLO model %s: %s", weights, exc)
+            self._model = None
+            raise
+
+    @property
+    def is_available(self) -> bool:
+        return self._model is not None
+
+    def set_video_fps(self, fps: float) -> None:
+        self._fps = float(fps)
+
+    def detect_frame(
+        self,
+        frame: np.ndarray | None,
+        frame_idx: int,
+    ) -> dict[str, Any]:
+        """Run inference on one frame.
+
         Args:
-            frame: Video frame (numpy array)
-            frame_idx: Frame index
-            
+            frame: BGR image array (H×W×3). None triggers fallback to mock.
+            frame_idx: Zero-based frame index.
+
         Returns:
-            Detection results with players, ball, referee positions
+            Frame detection dict (see _make_frame_result).
         """
-        if self.model is None or frame is None:
-            # Fallback to mock if model not available
-            return self._mock_detection(frame_idx)
-        
+        result = _make_frame_result(frame_idx, self._fps)
+
+        if self._model is None or frame is None:
+            logger.debug("Frame %d: model/frame unavailable — returning empty result.", frame_idx)
+            return result
+
+        if frame.ndim != 3 or frame.shape[2] != 3:
+            logger.warning("Frame %d: unexpected shape %s — skipping.", frame_idx, frame.shape)
+            return result
+
+        cfg = self.config
         try:
-            # Run YOLO inference
-            results = self.model(frame, conf=0.5, verbose=False)
-            result = results[0]
-            
-            detections = {
-                "frame_idx": frame_idx,
-                "timestamp": frame_idx / 25.0,  # Assuming 25 FPS
-                "players_home": [],
-                "players_away": [],
-                "ball": None,
-                "referee": []
-            }
-            
-            # Process detections
-            for box in result.boxes:
-                cls_id = int(box.cls[0])
-                conf = float(box.conf[0])
-                x1, y1, x2, y2 = box.xyxy[0].tolist()
-                
-                # Class mapping (depends on model training)
-                # Typically: 0=player_home, 1=player_away, 2=ball, 3=referee
-                if cls_id == 0:  # Home team player
-                    detections["players_home"].append({
-                        "id": len(detections["players_home"]) + 1,
-                        "bbox": [x1, y1, x2, y2],
-                        "confidence": conf,
-                        "position": [(x1 + x2) / 2, (y1 + y2) / 2]
-                    })
-                elif cls_id == 1:  # Away team player
-                    detections["players_away"].append({
-                        "id": len(detections["players_away"]) + 1,
-                        "bbox": [x1, y1, x2, y2],
-                        "confidence": conf,
-                        "position": [(x1 + x2) / 2, (y1 + y2) / 2]
-                    })
-                elif cls_id == 2:  # Ball
-                    detections["ball"] = {
-                        "bbox": [x1, y1, x2, y2],
-                        "confidence": conf,
-                        "position": [(x1 + x2) / 2, (y1 + y2) / 2]
-                    }
-                elif cls_id == 3:  # Referee
-                    detections["referee"].append({
-                        "id": len(detections["referee"]) + 1,
-                        "bbox": [x1, y1, x2, y2],
-                        "confidence": conf,
-                        "position": [(x1 + x2) / 2, (y1 + y2) / 2]
-                    })
-            
-            logger.debug(f"Frame {frame_idx}: {len(detections['players_home'])} home, {len(detections['players_away'])} away players detected")
-            return detections
-            
-        except Exception as e:
-            logger.error(f"YOLO detection error: {e}")
-            return self._mock_detection(frame_idx)
-    
-    def _mock_detection(self, frame_idx: int) -> Dict[str, Any]:
-        """Fallback mock detection"""
-        detections = {
-            "frame_idx": frame_idx,
-            "timestamp": frame_idx / 25.0,
-            "players_home": [],
-            "players_away": [],
-            "ball": None,
-            "referee": []
-        }
-        
-        for i in range(11):
-            detections["players_home"].append({
-                "id": i + 1,
-                "bbox": [random.randint(100, 1800), random.randint(100, 1000), 
-                        random.randint(100, 1800), random.randint(100, 1000)],
-                "confidence": random.uniform(0.85, 0.99),
-                "position": [random.randint(100, 1900), random.randint(100, 1080)]
-            })
-        
-        for i in range(11):
-            detections["players_away"].append({
-                "id": i + 1,
-                "bbox": [random.randint(100, 1800), random.randint(100, 1000),
-                        random.randint(100, 1800), random.randint(100, 1000)],
-                "confidence": random.uniform(0.85, 0.99),
-                "position": [random.randint(100, 1900), random.randint(100, 1080)]
-            })
-        
-        detections["ball"] = {
-            "bbox": [random.randint(100, 1900), random.randint(100, 1080),
-                    random.randint(100, 1900), random.randint(100, 1080)],
-            "confidence": random.uniform(0.75, 0.95),
-            "position": [random.randint(100, 1900), random.randint(100, 1080)]
-        }
-        
-        return detections
+            t0 = time.perf_counter()
+            raw = self._model(
+                frame,
+                device  = self._device,
+                imgsz   = cfg.imgsz,
+                conf    = cfg.conf,
+                iou     = cfg.iou,
+                max_det = cfg.max_det,
+                half    = cfg.half and self._device in ("cuda", "0"),
+                classes = cfg.classes,
+                verbose = cfg.verbose,
+            )
+            elapsed_ms = (time.perf_counter() - t0) * 1000
+
+            boxes = raw[0].boxes
+            detections = []
+            for box in boxes:
+                det = _detection_dict(
+                    bbox       = box.xyxy[0].cpu().tolist(),
+                    confidence = float(box.conf[0].cpu()),
+                    class_id   = int(box.cls[0].cpu()),
+                )
+                detections.append(det)
+
+            result["detections"]    = detections
+            result["inference_ms"]  = round(elapsed_ms, 1)
+
+            logger.debug(
+                "Frame %d: %d detections in %.1f ms",
+                frame_idx, len(detections), elapsed_ms,
+            )
+        except Exception as exc:
+            logger.error("YOLO inference error on frame %d: %s", frame_idx, exc)
+
+        return result
 
 
-def get_detector():
-    """Factory function to get appropriate detector"""
-    if settings.CV_MOCK_MODE:
-        logger.info("Using MockDetector (CV_MOCK_MODE=True)")
-        return MockDetector()
-    else:
-        logger.info("Using YOLODetector (CV_MOCK_MODE=False)")
-        try:
-            return YOLODetector()
-        except Exception as e:
-            logger.error(f"Failed to initialize YOLODetector: {e}")
-            logger.info("Falling back to MockDetector")
-            return MockDetector()
+# ── Mock detector (for tests / no-GPU environments) ──────────────────────────
+
+class MockDetector:
+    """Generates deterministic fake detections for testing and CI.
+
+    NOT for production use — coordinates are random and carry no meaning.
+    """
+
+    def __init__(self, config: DetectorConfig | None = None) -> None:
+        self.config   = config or DetectorConfig()
+        self._fps     = 25.0
+        self._rng     = random.Random(42)  # deterministic seed
+
+    def set_video_fps(self, fps: float) -> None:
+        self._fps = float(fps)
+
+    @property
+    def is_available(self) -> bool:
+        return True
+
+    def detect_frame(
+        self,
+        frame: np.ndarray | None,
+        frame_idx: int,
+    ) -> dict[str, Any]:
+        result = _make_frame_result(frame_idx, self._fps)
+
+        W = 1920 if frame is None else (frame.shape[1] if frame is not None else 1920)
+        H = 1080 if frame is None else (frame.shape[0] if frame is not None else 1080)
+
+        detections: list[dict[str, Any]] = []
+        rng = self._rng
+
+        # 22 players + 1 referee
+        for _ in range(23):
+            cx = rng.randint(80, W - 80)
+            cy = rng.randint(80, H - 80)
+            w  = rng.randint(28, 45)
+            h  = rng.randint(55, 90)
+            detections.append(_detection_dict(
+                bbox       = [cx - w // 2, cy - h // 2, cx + w // 2, cy + h // 2],
+                confidence = rng.uniform(0.55, 0.95),
+                class_id   = 0,
+            ))
+
+        result["detections"] = detections
+        return result
+
+
+# ── Factory ───────────────────────────────────────────────────────────────────
+
+def build_detector(config: DetectorConfig | None = None) -> YOLODetector | MockDetector:
+    """Return a detector instance based on config and available dependencies.
+
+    Tries YOLODetector first; falls back to MockDetector if YOLO is
+    unavailable or the model file cannot be loaded.
+
+    Args:
+        config: DetectorConfig (uses defaults if None).
+
+    Returns:
+        A detector with a ``detect_frame(frame, frame_idx)`` interface.
+    """
+    cfg = config or DetectorConfig()
+
+    if not YOLO_AVAILABLE:
+        logger.warning("YOLO unavailable — using MockDetector.")
+        return MockDetector(cfg)
+
+    try:
+        return YOLODetector(cfg)
+    except Exception as exc:
+        logger.warning("YOLODetector init failed (%s) — falling back to MockDetector.", exc)
+        return MockDetector(cfg)
