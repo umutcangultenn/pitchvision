@@ -12,9 +12,13 @@ redis==5.0.1
 rq==1.16.1
 minio==7.2.3
 opencv-python-headless==4.9.0.80
-numpy==1.26.3
-pandas==2.2.0
-pillow==10.2.0
+numpy>=1.26.0
+pandas>=2.2.0
+pillow>=10.3.0
 python-dateutil==2.8.2
 httpx==0.26.0
-scikit-learn==1.4.0
+scikit-learn>=1.4.0
+yt-dlp==2024.5.27
+ultralytics>=8.0.0
+torch>=2.0.0
+torchvision>=0.15.0

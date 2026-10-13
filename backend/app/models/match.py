@@ -45,6 +45,7 @@ class Match(MatchBase, table=True):
     team: "Team" = Relationship(back_populates="matches")
     analysis: Optional["Analysis"] = Relationship(back_populates="match")
     tactical_alerts: List["TacticalAlert"] = Relationship(back_populates="match")
+    match_report: Optional["MatchReport"] = Relationship(back_populates="match")
 
 
 class MatchCreate(MatchBase):

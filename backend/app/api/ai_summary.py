@@ -89,6 +89,6 @@ async def check_ai_health():
         async with httpx.AsyncClient(timeout=5.0) as client:
             response = await client.get(url, headers=headers)
             response.raise_for_status()
-            return {"status": "online", "provider": "NVIDIA NIM", "model": settings.NVIDIA_MODEL}
+            return {"status": "online", "provider": "NVIDIA NIM", "model": settings.NVIDIA_MODEL, "reasoning": "GLM-5.1 with thinking capabilities"}
     except Exception as e:
         return {"status": "offline", "error": str(e)}
