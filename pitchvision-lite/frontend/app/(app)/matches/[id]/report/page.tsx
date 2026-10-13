@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
   mockMatches, mockAlerts, mockClips, mockPlayers,
-  mockPerformances, mockDrills,
+  mockPerformances,
 } from "@/data/demo";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -243,9 +243,12 @@ export default function MatchReportPage() {
           <button className="px-4 py-2 rounded-lg text-sm font-medium bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 transition-all">
             🔗 Paylaş
           </button>
-          <button className="px-4 py-2 rounded-lg text-sm font-medium bg-success/20 border border-success/40 text-success hover:bg-success/30 transition-all">
-            📋 Antrenman Planına Ekle
-          </button>
+          <Link
+            href="/drills"
+            className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium bg-success/20 border border-success/40 text-success hover:bg-success/30 transition-all"
+          >
+            Antrenman planına ekle
+          </Link>
         </div>
       </div>
 

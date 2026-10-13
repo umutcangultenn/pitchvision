@@ -120,9 +120,9 @@ export function ClipsTab({ clips, onDownload, onShare, onAddToReport, onPlayClip
       {clips.length === 0 && (
         <div className="py-8">
           <EmptyState
-            title="Klip bulunamadı"
-            description="Video üzerinde önemli anları klip olarak kaydederek burada listeleyebilirsiniz."
-            icon="🎬"
+            title="Klip yok"
+            description="Bu maça ait etiketlenmiş video klibi mevcut değil. Analiz sırasında klip oluşturabilirsin."
+            icon="✂️"
           />
         </div>
       )}

@@ -1,0 +1,3414 @@
+
+böyle bir proje var. ekte daha önceki chatgpt konuşmalarım var. son prompta kadar gelip bütün promptları tamamladım. aşağıdaki github linkinden ulaşabilirsin. 
+https://github.com/umutcangultenn/pitchvision/tree/milestone/phase-1-pitchvision-lite-mvp
+cursorun son prompta verdiği yanıt da ekte. 
+
+burdan sonraki aşamalar ne olmalı. nasıl ilerlenmeli. kullanıma hazır duruma getirene kadar izlemem gereken yollar vs neler
+
+Birkaç saniye düşündüm
+Evet, önceki tek Phase 2 prompt’u projeyi doğru yöne sokar, ama “tamamen user’a uygun, kullanıma hazır ürün” haline tek başına getirmez. O prompt daha çok şu işi yapar:
+
+Demo/MVP → gerçek ürün altyapısına geçiş.
+
+Yani auth, upload, storage, job queue, processing status gibi temel üretim altyapısını kurdurur. Ama görüntü işleme, YOLO, tracker, rapor, klip, KVKK, deploy, pilot test gibi her şeyi tek prompt’ta güvenilir şekilde yaptırmak doğru olmaz. Mevcut projede gerçek YOLO/video analizi/klip üretimi hâlâ yok; start_match_processing büyük ölçüde durum güncelliyor, CV kısmı demo/stub seviyesinde. 
+
+
+Bu yüzden tek devasa prompt değil, faz faz ve her faz içinde küçük promptlarla ilerlenmeli.
+
+1. Tek prompt yeterli mi?
+Hayır.
+
+Tek prompt şunlarda iyi çalışır:
+
+genel yön verme
+
+mimariyi kurdurma
+
+dosya yapısı oluşturma
+
+küçük/orta kapsamlı modül yaptırma
+
+refactor yaptırma
+
+test yazdırma
+
+Ama şu projede tek prompt riskli olur çünkü aynı anda şunlar var:
+
+multi-tenant auth
+
+büyük video upload
+
+object storage
+
+async processing
+
+OpenCV
+
+YOLO inference
+
+tracker
+
+homography
+
+klip üretimi
+
+PDF rapor
+
+frontend entegrasyonu
+
+KVKK/gizlilik
+
+deploy
+
+AI tek seferde bunların hepsini yapmaya çalışırsa genelde:
+
+bazı yerleri stub bırakır,
+
+testleri yüzeysel yazar,
+
+UI ile backend uyumsuz olur,
+
+gerçek video işleme çalışmaz,
+
+YOLO entegrasyonu “varmış gibi” görünür ama çalıştırınca patlar,
+
+edge case’ler eksik kalır.
+
+Bu proje için doğru yaklaşım:
+
+Her faz = ayrı branch
+Her faz = 5-10 küçük prompt
+Her prompt = tek net çıktı
+Her çıktı sonrası = test + kalite kontrol + commit
+2. Nasıl ilerlenmeli?
+Benim önerdiğim branch/faz yapısı şu:
+
+Mevcut durum
+milestone/phase-1-pitchvision-lite-mvp
+Bu branch doğru isimlendirilmiş. Faz 1 şu an “Lite MVP foundation” olarak kabul edilmeli. Mevcut kalite kontrol çıktısına göre monorepo düzenli, frontend/backend ayrımı var, /api/v1 hizalanmış, analytics testleri eklenmiş ve 107 backend testi geçmiş; ama gerçek YOLO/video analizi/otomatik klip üretimi yok. 
+
+
+Phase 2 — Production Core Pipeline
+Branch:
+
+phase-2/production-core-pipeline
+Amaç:
+
+Gerçek kullanıcı, gerçek video upload, gerçek processing job altyapısı.
+
+Bu fazda YOLO’ya henüz girilmemeli.
+
+Yapılacaklar:
+
+Auth
+
+Multi-tenant güvenlik
+
+Büyük video upload
+
+Storage abstraction
+
+Metadata extraction
+
+Async job queue
+
+Processing status
+
+Frontend’in bu gerçek API’lere bağlanması
+
+Bu faz sonunda sistem şunu yapmalı:
+
+Kullanıcı giriş yapar
+→ organizasyonuna ait maç oluşturur
+→ video yükler
+→ video metadata çıkar
+→ processing job başlar
+→ status ekranı gerçek job durumunu gösterir
+CV hâlâ mock olabilir. Çünkü önce boru hattını gerçek yapman gerekiyor.
+
+Phase 3 — CV Analysis Engine v1
+Branch:
+
+phase-3/cv-analysis-engine-v1
+Amaç:
+
+Gerçek video üzerinde oyuncu detection/tracking ve temel metrik üretmek.
+
+Bu fazda YOLO girer.
+
+Yapılacaklar:
+
+Frame extraction
+
+Calibration frame seçimi
+
+Homography kayıt/uygulama
+
+YOLO detector interface
+
+Local YOLO model loading
+
+Player detection
+
+Tracker entegrasyonu
+
+TrackPoint kayıtları
+
+Saha koordinatına dönüşüm
+
+Team shape metrics
+
+Defensive line/block gap alerts
+
+Bu faz sonunda sistem şunu yapmalı:
+
+Yüklenen videodan frame çıkar
+→ kalibrasyon uygula
+→ oyuncuları tespit et
+→ track et
+→ saha koordinatlarına çevir
+→ takım boyu/genişlik/kompaktlık üret
+→ savunma hattı/blok uyarıları üret
+Phase 4 — Clips & Reports
+Branch:
+
+phase-4/clips-reports-output
+Amaç:
+
+Analiz çıktısını antrenöre değerli hale getirmek.
+
+Yapılacaklar:
+
+FFmpeg ile klip kesme
+
+Alert → clip ilişkisi
+
+Thumbnail üretimi
+
+Report snapshot
+
+HTML report
+
+PDF export
+
+Paylaşılabilir rapor linki
+
+Oyuncu pasaportu güncelleme
+
+Bu faz sonunda sistem:
+
+Alert bulur
+→ ilgili video aralığını klip olarak keser
+→ rapora koyar
+→ PDF üretir
+→ kullanıcıya indirilebilir/paylaşılabilir çıktı verir
+Phase 5 — Pilot-Ready Product
+Branch:
+
+phase-5/pilot-ready-release
+Amaç:
+
+2-5 kulübe kontrollü pilot olarak verilebilir hale getirmek.
+
+Yapılacaklar:
+
+KVKK/gizlilik
+
+Veli onayı kayıtları
+
+Audit log
+
+Admin panel
+
+Usage limits
+
+Hata gözlemleme
+
+Sentry/logging
+
+Backup
+
+Staging/prod deploy
+
+Pilot feedback formu
+
+Bu faz sonunda ürün “herkese açık SaaS” değil ama pilot kulüplerle gerçek kullanım seviyesine gelir.
+
+3. Her adım için ayrı ayrı prompt kullanılmalı mı?
+Evet. Hatta şöyle ilerle:
+
+Yanlış yöntem
+“Projeyi üretime hazır hale getir, YOLO ekle, upload yap, rapor oluştur, deploy et.”
+Bu çok geniş. AI yüzeysel geçer.
+
+Doğru yöntem
+“Phase 2 için sadece auth + multi-tenant izolasyonunu yap. Testleri ekle. Mockları bozma.”
+Sonra:
+
+“Şimdi video upload ve storage abstraction ekle. Auth’u kullan. Testleri ekle.”
+Sonra:
+
+“Şimdi processing job state machine ekle. CV hâlâ mock kalsın.”
+Yani her prompt tek bir teknik hedefe sahip olmalı.
+
+4. Önerilen prompt sırası
+Aşağıdaki sıra ile ilerlersen daha güvenli olur.
+
+Prompt 1 — Phase 2 başlangıç / repo analizi
+Current branch: milestone/phase-1-pitchvision-lite-mvp.
+
+Create a new branch: phase-2/production-core-pipeline.
+
+Before coding, inspect the existing monorepo structure, backend models, API routes, frontend API client, auth approach, storage/video handling, and tests.
+
+Return:
+1. Current architecture summary
+2. What is already implemented
+3. What is stub/mock
+4. Phase 2 implementation plan
+5. Files likely to change
+
+Do not implement yet.
+Bunu önce yaptır. AI projeyi anlamadan kod yazmasın.
+
+Prompt 2 — Auth + multi-tenant
+Implement real authentication and multi-tenant access control for PitchVision Lite.
+
+Requirements:
+- Remove demo behavior where missing token falls back to first user.
+- Add JWT login/register.
+- Add password hashing.
+- Add current_user dependency.
+- Add organization-scoped access.
+- Add roles: Admin, Coach, Analyst, Scout, Viewer.
+- Ensure every organization/team/match/player/report query is scoped by organization_id.
+- Add tests proving users cannot access another organization’s data.
+- Keep seed/demo login working through explicit credentials, not implicit first user fallback.
+- Update README and .env.example.
+
+Do not change video processing or YOLO in this step.
+Bu en kritik güvenlik adımı.
+
+Prompt 3 — Upload + storage
+Implement real video upload and storage abstraction.
+
+Requirements:
+- Add video upload endpoint for matches.
+- Validate file extension and MIME type: MP4/MOV.
+- Add max file size config.
+- Add local storage backend for dev.
+- Add MinIO/S3-compatible storage interface but keep local as default.
+- Store VideoAsset metadata in DB.
+- Add signed URL abstraction.
+- Extract video metadata with ffprobe/moviepy/opencv fallback:
+  duration, fps, width, height, codec if available.
+- Add upload status fields.
+- Add backend tests for valid upload, invalid MIME, oversized file.
+- Connect frontend upload page to real API when NEXT_PUBLIC_USE_MOCKS=false.
+- Keep mock mode working.
+
+Do not implement YOLO yet.
+Prompt 4 — Processing job queue
+Implement async processing job pipeline.
+
+Requirements:
+- Use Redis + RQ or Celery. Choose the simpler option for the current repo.
+- Add MatchProcessingJob model.
+- Add processing states:
+  created, uploaded, queued, extracting_metadata, extracting_frames,
+  waiting_calibration, detecting, tracking, calculating_metrics,
+  generating_alerts, generating_clips, generating_report, completed, failed.
+- POST /matches/{id}/process should enqueue a job.
+- GET /matches/{id}/processing-status should return real job state.
+- Add idempotency: do not create duplicate active jobs for the same match.
+- Add retry endpoint.
+- Add error_message and progress_percent.
+- Add tests for state transitions.
+- Connect frontend processing screen to real status endpoint.
+
+CV can stay mock.
+Bundan sonra Phase 2 bitmeye yaklaşır.
+
+Prompt 5 — Phase 2 kalite kontrol
+Quality check Phase 2.
+
+Run backend tests, frontend lint/build if available, and API smoke tests.
+
+Check:
+- Auth works
+- No unauthenticated fallback exists
+- Organization isolation works
+- Upload works
+- Storage works
+- Processing job starts
+- Processing status updates
+- Mock mode still works
+- Docker Compose still works
+- README is updated
+
+Fix issues found.
+Add a README section: Phase 2 Status.
+Commit changes with a clear message.
+Bu prompt’tan sonra branch’i pushla.
+
+5. Görüntü işleme / YOLO süreci nasıl ilerlemeli?
+Burada en önemli stratejik karar şu:
+
+Başlangıçta local model kurulmalı. Cloud inference’a hemen geçme.
+
+Neden?
+
+Maliyet kontrolü sende olur.
+
+Debug kolay olur.
+
+Model versiyonunu kontrol edersin.
+
+İlk pilotta veri gizliliği daha rahat olur.
+
+Amatör/genç oyuncu videosu hassas olabilir.
+
+Ama local derken iki farklı şey var:
+
+Geliştirme local’i
+Senin bilgisayarında çalışan model.
+
+Öneri:
+
+Python 3.11
+
+Ultralytics YOLO
+
+OpenCV
+
+ffmpeg
+
+torch
+
+CPU ile küçük test
+
+GPU varsa CUDA ile hızlandırma
+
+Windows’ta sorun yaşarsan WSL2 veya Docker daha sağlıklı olur. Eklerde zaten Python 3.13 + Windows + psycopg2-binary tarafında kurulum sorunu yaşandığı belirtilmiş; daha güvenilir local kurulum için Docker Compose veya Python 3.11 önerilmiş. 
+
+
+Üretim local’i / worker makinesi
+Sunucuda GPU’lu worker.
+
+Öneri:
+
+Web/backend ayrı çalışır.
+
+CV worker ayrı çalışır.
+
+Worker GPU kullanır.
+
+Backend sadece job verir.
+
+Worker sonucu DB/storage’a yazar.
+
+Yani mimari şöyle olmalı:
+
+Frontend
+  ↓
+FastAPI Backend
+  ↓
+Redis Queue
+  ↓
+CV Worker
+  ↓
+Storage + Database
+YOLO asla frontend’de çalışmamalı. Backend request içinde de uzun inference çalışmamalı. Worker’da çalışmalı.
+
+6. YOLO için hangi model?
+İlk aşamada özel model eğitme. Önce hazır model + az veriyle test.
+
+Aşama 1 — Hazır model ile proof of concept
+Kullanılabilir seçenekler:
+
+yolov8n.pt
+
+yolov8s.pt
+
+yolo11n.pt / yolo11s.pt varsa Ultralytics sürümüne göre
+
+football/soccer custom model varsa deneysel olarak
+
+İlk hedef:
+
+oyuncu bbox çıkarabiliyor mu?
+
+kuşbakışı/drone görüntüsünde oyuncuları ayırabiliyor mu?
+
+fps ne kadar?
+
+yanlış tespit oranı ne?
+
+Burada top tespitine takılma. Top drone görüntüsünde çok küçük ve zor.
+
+Aşama 2 — Player-only detection
+Sınıflar:
+
+player
+goalkeeper
+referee
+ball optional
+İlk gerçek ürün metriği için sadece player bile yeterli olabilir.
+
+Çünkü takım şekli için topa gerek yok.
+
+Aşama 3 — Kendi veri seti
+10-20 maçtan frame çıkar.
+
+Etiketlenecek görüntüler:
+
+farklı saha
+
+farklı ışık
+
+farklı forma
+
+farklı yaş grubu
+
+drone / tribün açısı
+
+İlk veri seti:
+
+500-1000 frame
+Sınıflar:
+
+player
+goalkeeper
+referee
+ball
+Araçlar:
+
+Roboflow
+
+CVAT
+
+Label Studio
+
+makesense.ai
+
+Aşama 4 — Fine-tune
+Hazır modelden başla.
+
+İlk hedef:
+
+oyuncu detection iyi olsun
+
+top opsiyonel
+
+referee/goalkeeper sonra iyileştirilebilir
+
+Fine-tune çıktısı:
+
+models/pitchvision-player-detector-v1.pt
+Bunu repo içine koyma. Büyük model dosyalarını Git LFS veya model registry ile yönet.
+
+7. Tracker nasıl seçilmeli?
+Önerim:
+
+İlk tracker
+ByteTrack
+Neden?
+
+Spor tracking’de sık kullanılır.
+
+Re-ID gerektirmeden iyi başlangıç verir.
+
+YOLO bbox çıktılarıyla uyumlu.
+
+Başlangıç için DeepSORT’tan daha sade olabilir.
+
+Sonraki aşama
+BoT-SORT
+Forma rengi / appearance embedding için daha güçlü olabilir.
+
+MVP tracker hedefi
+Kusursuz ID continuity bekleme. İlk hedef:
+
+takım şekli metrikleri için yeterli track
+
+oyuncu koordinat yoğunluğu
+
+savunma hattı tespiti
+
+blok mesafesi
+
+Oyuncu bazlı pasaport için ID’nin doğru oyuncuya bağlanması daha zor. İlk pilotta oyuncu pasaportu şu şekilde olmalı:
+
+Takım/pozisyon bazlı yaklaşık performans + manuel oyuncu eşleştirme
+Tam otomatik “bu Arda Yılmaz” tespiti ilk aşamada gerçekçi değil.
+
+8. Homografi / kalibrasyon nasıl ilerlemeli?
+Mevcut projede homografi için app/cv/calibration.py eklenmiş ve OpenCV şart olmadan NumPy ile çalışır hale getirilmiş. 
+
+ Bu iyi bir temel.
+
+İlerleyiş:
+
+V1 — Manuel kalibrasyon
+Kullanıcı saha noktalarını işaretler.
+
+Gerekli noktalar:
+
+dört saha köşesi
+
+orta nokta
+
+ceza sahası köşeleri opsiyonel
+
+Backend:
+
+pixel points + real field points → homography matrix
+Output:
+
+H matrix
+calibration_quality
+mean_error_meters
+V2 — Yarı otomatik
+Kullanıcı 4 köşe seçer, sistem çizgileri tahmin eder.
+
+V3 — Otomatik saha çizgisi
+Line detection / segmentation.
+
+Bunu hemen yapma. Çok zaman yer.
+
+İlk pilot için manuel kalibrasyon yeterli.
+
+9. Top tracking nasıl ilerlemeli?
+Top tracking’i ilk aşamada ana hedef yapma.
+
+Neden?
+
+Drone görüntüsünde top çok küçük.
+
+Motion blur olur.
+
+Oyuncuların altında kaybolur.
+
+Hazır modeller topu kaçırır.
+
+Yanlış top tespiti metrikleri bozar.
+
+Sıra şöyle olmalı:
+
+Top olmadan üretilecek metrikler
+takım boyu
+
+takım genişliği
+
+kompaktlık
+
+savunma hattı
+
+blok arası mesafe
+
+ortalama pozisyon
+
+heatmap
+
+hız / koşu yoğunluğu
+
+hat sapması
+
+derin koşu adayı, yaklaşık
+
+Top ile daha sonra üretilecekler
+possession
+
+pass
+
+shot
+
+transition start
+
+ball recovery
+
+final third entry
+
+top kaybı sonrası reaksiyon
+
+İlk pilotta top yerine bazı event’ler manuel etiketlenebilir:
+
+Kullanıcı “top kazanımı” anını işaretler
+→ sistem sonraki 5 saniyede takım ilerlemesini hesaplar
+Bu, tam otomatik top tracking’den çok daha hızlı ürün değeri verir.
+
+10. CV pipeline teknik mimarisi
+Bence backend’de şu yapı olmalı:
+
+backend/app/cv/
+  video_io.py
+  frame_extractor.py
+  calibration.py
+  coordinate_transform.py
+  detector_base.py
+  yolo_detector.py
+  tracker_base.py
+  bytetrack_tracker.py
+  team_classifier.py
+  smoothing.py
+  pipeline.py
+  debug_visualizer.py
+Pipeline:
+
+1. Load video
+2. Extract metadata
+3. Extract sampled frames
+4. Load calibration
+5. Run detector
+6. Run tracker
+7. Convert bbox bottom-center pixel → field coordinate
+8. Smooth coordinates
+9. Classify team
+10. Save TrackPoints
+11. Run analytics
+12. Generate alerts
+13. Generate clips
+14. Generate report
+Önemli: Her aşama disk/DB’ye ara çıktı yazmalı. Yoksa hata ayıklamak zorlaşır.
+
+Örneğin:
+
+outputs/match_123/
+  frames/
+  detections.parquet
+  tracks.parquet
+  calibrated_tracks.parquet
+  metrics.json
+  alerts.json
+  clips/
+  debug_overlay.mp4
+Bu debug çıktıları ilk geliştirme aşamasında çok değerli olur.
+
+11. YOLO için prompt sırası
+Phase 3’e geldiğinde şu şekilde git.
+
+Prompt 1 — CV pipeline plan
+Create Phase 3 branch: phase-3/cv-analysis-engine-v1.
+
+Inspect existing app/cv and app/analytics modules.
+
+Design a real CV pipeline for uploaded match videos:
+- frame extraction
+- calibration loading
+- detector interface
+- YOLO detector implementation
+- tracker interface
+- ByteTrack integration placeholder or implementation
+- coordinate transform
+- trackpoint persistence
+- analytics integration
+
+Do not implement yet. Return file-level implementation plan and risks.
+Prompt 2 — Frame extraction + metadata
+Implement frame extraction and video metadata utilities.
+
+Requirements:
+- Use ffmpeg/ffprobe if available, fallback to OpenCV.
+- Extract frames at configurable sample FPS.
+- Store frames under match-specific working directory.
+- Return metadata: duration, fps, width, height, frame_count.
+- Add tests using a generated tiny video fixture.
+- Do not add YOLO yet.
+Prompt 3 — YOLO detector
+Implement YoloDetector behind DetectorBase.
+
+Requirements:
+- Use ultralytics package.
+- Model path comes from env/config.
+- If model path is missing, raise clear error.
+- Keep MockDetector as fallback for tests.
+- Normalize output into DetectionResult schema.
+- Support classes: player, goalkeeper, referee, ball.
+- Add a small smoke test that mocks ultralytics model output.
+- Do not require real model file in CI.
+Prompt 4 — Local model setup docs
+Add local YOLO setup documentation.
+
+Include:
+- Python 3.11 recommendation
+- installing torch/ultralytics
+- where to place model files
+- env variable PITCHVISION_YOLO_MODEL_PATH
+- CPU vs GPU notes
+- how to run detector on one sample frame
+- troubleshooting CUDA/Windows/WSL2
+Do not commit model weights.
+Prompt 5 — Tracker
+Implement tracker abstraction and initial ByteTrack-compatible tracker.
+
+Requirements:
+- TrackerBase interface
+- SimpleTracker fallback for tests
+- ByteTrack adapter if dependency is available
+- TrackResult schema
+- Track IDs across frames
+- Save TrackPoint records
+- Add tests using synthetic detections.
+Prompt 6 — Calibration + coordinate transform integration
+Integrate calibration into tracking pipeline.
+
+Requirements:
+- Use saved FieldCalibration homography matrix.
+- Convert detection bbox bottom-center pixel point to field coordinate.
+- Save pixel_x, pixel_y, field_x, field_y.
+- Add calibration quality checks.
+- If calibration missing, job state becomes waiting_calibration.
+- Add tests for pixel-to-field conversion in pipeline.
+Prompt 7 — Analytics from real tracks
+Connect real TrackPoint data to analytics engine.
+
+Requirements:
+- Build frame snapshots from TrackPoints.
+- Calculate team length, width, compactness, block gaps, defensive line error.
+- Generate TacticalAlert records.
+- Alerts must include confidence, severity, time range, description.
+- Use non-judgmental Turkish text.
+- Add tests with synthetic trackpoint data.
+Prompt 8 — Debug overlay
+Add debug visualization output for CV pipeline.
+
+Requirements:
+- Generate short overlay video or annotated frames.
+- Draw player bbox, track_id, team color, field coordinates optionally.
+- Draw defensive line and alert markers.
+- Save debug artifact path.
+- Make it optional via config.
+Bu şekilde ilerlersen YOLO tarafı kontrollü olur.
+
+12. Local model mi, cloud model mi?
+Benim önerim:
+
+İlk 3 ay
+Local model + local/worker inference.
+
+Sebep:
+
+hızlı denersin
+
+model maliyeti yok
+
+veri dış servise gitmez
+
+fine-tune kolay
+
+debug kolay
+
+Pilot aşaması
+GPU’lu tek worker makinesi.
+
+Örneğin:
+
+1 backend server
+1 postgres
+1 redis
+1 object storage
+1 GPU worker
+Başlangıçta tek GPU worker yeter.
+
+Daha sonra
+Eğer iş büyürse:
+
+ayrı CV worker pool
+
+job priority
+
+batch inference
+
+cloud GPU
+
+spot instance
+
+Kubernetes vs.
+
+Ama şimdilik Kubernetes/complex cloud’a girme. Gereksiz karmaşa olur.
+
+13. Donanım beklentisi
+Geliştirme için:
+
+Minimum
+CPU ile çalışır ama yavaş olur.
+
+Kısa video / düşük FPS sampling ile test edilir.
+
+İyi seviye
+NVIDIA GPU, 8GB VRAM ve üstü
+
+RTX 3060 / 4060 / 4070 iş görür
+
+WSL2 + CUDA veya Linux daha iyi
+
+Pilot worker
+NVIDIA T4 / L4 / RTX 4090 / A10 gibi GPU
+
+Başlangıçta kısa maç segmentleriyle test
+
+Not: Tam 90 dakika videoyu yüksek FPS ile işlemek maliyetli olur. İlk pilotta sampling stratejisi kullan:
+
+analysis_sample_fps = 5 veya 10
+clip_output = orijinal videodan kesilir
+Yani analiz için her frame’i işlemek zorunda değilsin.
+
+14. Zaman tahmini: full AI ile ne kadar kaldı?
+Bunu gerçekçi söyleyeyim: Full AI ile çok hızlanır ama “tamamen ürün” yine tek başına 1-2 haftalık iş değil.
+
+Çünkü en zor kısım kod yazmak değil:
+
+gerçek videoda doğruluk
+
+model kalitesi
+
+edge case
+
+upload/storage hataları
+
+worker stabilitesi
+
+rapor çıktısının antrenöre değer vermesi
+
+pilot geri bildirimi
+
+Senaryo A — Demo’dan daha iyi, local çalışan gerçek POC
+Kapsam:
+
+gerçek video upload
+
+local processing
+
+YOLO ile oyuncu detection
+
+basit tracking
+
+temel metrik
+
+basit rapor
+
+Süre:
+
+2-4 hafta
+Full AI + sen düzenli test edersen mümkün.
+
+Senaryo B — Pilot kulübe verilebilir MVP
+Kapsam:
+
+auth
+
+multi-tenant
+
+upload/storage
+
+async processing
+
+YOLO player tracking
+
+kalibrasyon
+
+alert
+
+klip
+
+rapor
+
+basic privacy
+
+staging deploy
+
+Süre:
+
+8-12 hafta
+Bu daha gerçekçi hedef.
+
+Senaryo C — Ücretli SaaS v1
+Kapsam:
+
+pilot geri bildirimleri işlenmiş
+
+daha stabil CV
+
+billing veya paket mantığı
+
+kullanıcı davetleri
+
+audit log
+
+storage quota
+
+destek/operasyon
+
+monitoring
+
+KVKK süreçleri
+
+dokümantasyon
+
+Süre:
+
+4-6 ay
+Senaryo D — Hudl/Wyscout benzeri güçlü analiz ürünü
+Kapsam:
+
+top tracking
+
+event detection
+
+pas/şut/top kaybı
+
+oyuncu kimliği eşleme
+
+yüksek doğruluk
+
+farklı saha/kamera koşullarında robust sistem
+
+gelişmiş scouting
+
+Süre:
+
+9-18 ay+
+Full AI bunu hızlandırır ama veri/model doğruluğu kısmını tamamen ortadan kaldırmaz.
+
+15. Senin için önerdiğim net zaman planı
+İlk 2 hafta
+Hedef: Phase 2 altyapı.
+
+Auth
+
+Multi-tenant
+
+Upload
+
+Storage
+
+Processing job
+
+Status ekranı
+
+Çıktı:
+
+Gerçek kullanıcı gerçek video yükleyebiliyor.
+Analiz job olarak başlıyor.
+UI gerçek status gösteriyor.
+3-6. hafta
+Hedef: CV v1.
+
+Frame extraction
+
+Manual calibration
+
+YOLO detector
+
+Simple/ByteTrack tracker
+
+TrackPoint
+
+Team shape metrics
+
+Basic alerts
+
+Çıktı:
+
+Gerçek videodan oyuncu koordinatı ve temel taktik metrik çıkıyor.
+7-9. hafta
+Hedef: Rapor/klip.
+
+FFmpeg clips
+
+HTML/PDF report
+
+Alert explanations
+
+Drill recommendations
+
+Player passport update
+
+Çıktı:
+
+Antrenöre gönderilebilir rapor ve klipler oluşuyor.
+10-12. hafta
+Hedef: Pilot.
+
+staging deploy
+
+KVKK/izin alanları
+
+logging
+
+error handling
+
+5-10 gerçek maç testi
+
+pilot kulüp kullanımı
+
+Çıktı:
+
+Kontrollü pilot ürünü.
+16. En kritik kararlar
+1. Önce ürün altyapısı, sonra YOLO
+YOLO’ya hemen girersen güzel demo çıkar ama ürün dağıtılamaz. Önce upload/queue/auth.
+
+2. İlk CV hedefi “oyuncu tracking”
+Top tracking’i ertele.
+
+3. İlk analiz hedefi “taktiksel şekil”
+Pas/şut/gol/event detection’ı ertele.
+
+4. İlk müşteri değeri “klip + rapor”
+Dashboard’dan daha önemli.
+
+5. İlk pilotta insan onayı olsun
+Alert’ler “otomatik analiz adayı” olarak kalmalı. Bu ürün dili zaten önceki tasarım promptlarında da doğru şekilde tanımlanmıştı: genç oyuncular için gelişim odaklı dil ve kesin hüküm vermeyen taktiksel uyarı yaklaşımı korunmalı. 
+
+
+17. Kısa cevap
+Önceki Phase 2 prompt’u tek başına user’a tamamen hazır ürün çıkarmaz.
+O sadece üretim altyapısının ilk büyük adımıdır.
+
+Her adım ayrı promptlarla ilerlenmeli.
+Özellikle auth, upload, queue, YOLO, tracker, rapor, klip ayrı ayrı yapılmalı.
+
+YOLO sürecinde önce local model kurulmalı.
+Hazır YOLO modeliyle oyuncu tespiti denenmeli, sonra küçük futbol veri setiyle fine-tune yapılmalı. Top tracking ve event detection sonraya bırakılmalı.
+
+Full AI ile gerçekçi kalan süre:
+
+Local gerçek POC: 2-4 hafta
+
+Pilot kulübe verilebilir MVP: 8-12 hafta
+
+Ücretli SaaS v1: 4-6 ay
+
+Gelişmiş futbol analiz ürünü: 9-18 ay+
+
+Ben olsam şu an hemen phase-2/production-core-pipeline branch’i açıp auth + upload + processing job ile başlardım. CV/YOLO’yu Phase 3’e bırakmak en sağlıklı yol.
+
+
+peki şöyle, şuan aktif durumunu geliştirdikten sonra local ortamda devam edeceğim . ancak bununla uğraşılmasına sence değer mi? fikri beğendin mi üzerine gidilir mi
+
+Bence evet, uğraşılmasına değer — ama fikrin değerli kısmı “amatörlere Hudl/Wyscout yapacağım” değil. Asıl güçlü tarafı şu:
+
+Senin yazılımcı + antrenör adayı kimliğini kanıtlayacak, sahada gerçek probleme dokunan bir ürün/portfolyo olması.
+
+Bu yüzden üzerine gidilir. Ama doğru beklentiyle.
+
+Fikri beğendim mi?
+Evet. Çünkü üç güçlü tarafı var:
+
+Birincisi, pazar problemi gerçek. Amatör kulüpler, futbol okulları ve akademiler profesyonel analiz araçlarına erişemiyor. Video çekiyorlar ama çoğu zaman o video veriye, klibe, oyuncu gelişim takibine veya antrenman planına dönüşmüyor.
+
+İkincisi, senin profilinle çok uyumlu. 22 yaşında yazılımcı-antrenör adayı olarak bu proje seni “sadece yazılım yapan biri” değil, “oyunu veriyle okuyup sahaya çevirebilen biri” yapar. Avrupa akademileri, kulüpler veya TFF/UEFA yolunda bu çok güçlü bir portfolyo olur.
+
+Üçüncüsü, başarılı olmak için en başta kusursuz AI gerekmiyor. İlk satılabilir/değerli sürüm şu olabilir:
+
+“Maç videosunu yükle, saha kalibrasyonunu yap, sistem takım boyu/kompaktlık/blok arası mesafe/savunma hattı sapması gibi 5-6 metrik çıkarsın, önemli klipleri önersin, antrenöre PDF rapor versin.”
+
+Bu bile amatör seviyede değerli olabilir.
+
+Ama nerede dikkatli olmalısın?
+Bu proje teknik olarak zor. Özellikle şu taraflar hafife alınmamalı:
+
+top tracking,
+
+pas/şut/gol event detection,
+
+her sahada/kamerada doğru çalışan YOLO,
+
+oyuncu kimliğini maç boyunca doğru koruma,
+
+drone/izin/operasyon,
+
+U8-U17 veri gizliliği,
+
+video işleme maliyeti.
+
+Yani “AI her şeyi otomatik analiz etsin” hedefi kısa vadede ağır olur.
+
+Ama “antrenöre karar desteği veren Lite analiz aracı” hedefi gayet mantıklı.
+
+Ben olsam devam eder miydim?
+Evet, ama şu şekilde devam ederdim:
+
+Bunu önce SaaS unicorn gibi değil, 3 hedefli proje gibi görürdüm:
+
+Portfolyo projesi: Seni modern antrenör adayı olarak ayrıştırır.
+
+Pilot ürün: 2-5 kulüpte gerçek maçlarla test edilir.
+
+SaaS adayı: Pilotlardan sonra gerçekten para eder mi anlaşılır.
+
+Yani ilk hedefin “hemen şirket kurayım” değil, şu olmalı:
+
+“10 gerçek maçtan 10 kullanılabilir rapor çıkarabiliyor muyum ve antrenörler bu raporla antrenman planını değiştiriyor mu?”
+
+Bunun cevabı evetse, proje gerçekten büyütülür.
+
+Bence en doğru MVP ne olmalı?
+Şu an kafanı top tracking/event detection ile yorma. İlk gerçek MVP şöyle olsun:
+
+video upload,
+
+manuel/yarı otomatik saha kalibrasyonu,
+
+oyuncu tespiti/tracking,
+
+takım boyu,
+
+takım genişliği,
+
+kompaktlık,
+
+blok arası mesafe,
+
+savunma hattı sapması,
+
+otomatik/yarı otomatik klip kesme,
+
+PDF/HTML maç raporu,
+
+oyuncu pasaportu için basit gelişim kaydı,
+
+antrenman önerisi.
+
+Bu MVP, hem teknik olarak yapılabilir hem de antrenöre anlatması kolay.
+
+Pazar tarafında para eder mi?
+Potansiyel var ama satış modeli çok dikkatli olmalı.
+
+Amatör kulüpler genelde yüksek SaaS ücreti ödemez. Ama futbol okulları ve akademiler için şu değerli olabilir:
+
+velilere profesyonel rapor göstermek,
+
+oyuncu gelişimini takip etmek,
+
+sosyal medya/klip üretmek,
+
+antrenörü daha profesyonel göstermek,
+
+oyuncu seçmelerini daha objektif yapmak.
+
+Bu yüzden ilk müşteri segmentin bence futbol okulları + gelişim akademileri olmalı. Direkt amatör A takım kulüplerinden başlamak daha zor olabilir.
+
+En büyük risk ne?
+En büyük risk teknik değil, ürünü fazla karmaşıklaştırman.
+
+Şu hataya düşme:
+
+“Pas tespiti, şut tespiti, xG, top tracking, scouting radar, drone operasyon, otomatik taktik hata analizi, hepsi olsun.”
+
+Bu seni 1 yıl yorar ve ürün bitmez.
+
+Doğru odak:
+
+“Antrenörün maçtan sonra 15 dakikada oyunculara göstereceği 8-10 klip ve 1 sayfalık taktik rapor.”
+
+Bu olursa proje değerli hale gelir.
+
+Local ortamda devam etmeye değer mi?
+Evet. Hatta local devam etmek en doğru yol. Çünkü görüntü işleme tarafını bol bol denemen gerekecek.
+
+Ama local çalışma amacın şu olmalı:
+
+Gerçek bir maç videosu al.
+
+2-3 dakikalık segment kes.
+
+Saha kalibrasyonu yap.
+
+Oyuncuları tespit et.
+
+Koordinatları sahaya dönüştür.
+
+Takım şekli metriği çıkar.
+
+Bir tane savunma hattı alert’i üret.
+
+Bunu rapora koy.
+
+Bunu başardığında proje teoriden çıkar.
+
+Şahsi değerlendirmem
+Ben fikri 7.5/10 görüyorum.
+
+Ama doğru daraltılmış haliyle:
+
+“Amatör/gençlik futbolu için düşük maliyetli video tabanlı maç raporu + klip + oyuncu gelişim platformu”
+
+bu haliyle 8.5/10 olur.
+
+Yanlış genişletilmiş haliyle:
+
+“Wyscout + Hudl + StatsBomb + otomatik AI antrenör”
+
+bu haliyle 4/10 olur, çünkü çok büyük ve erken aşamada boğar.
+
+Devam etmen için karar kriteri
+Bence kendine 6 haftalık bir test koy:
+
+6 hafta içinde şunu yapabiliyorsan devam et:
+
+3 gerçek maç videosu işle,
+
+her maçtan 5-10 kullanılabilir klip çıkar,
+
+1 sayfalık rapor üret,
+
+bunu 2 gerçek antrenöre göster,
+
+“bunu kullanırım” veya “şu haliyle şu kadar öderim” geri bildirimi al.
+
+Bu geri bildirimi alamazsan ürünü yeniden daraltırsın.
+
+Ama alırsan kesinlikle üzerine gidilir.
+
+Net cevap
+Evet, değer. Fikri beğendim. Üzerine gidilir.
+
+Ama bunu “AI ile otomatik futbol zekası” diye değil, “antrenörün video izleme ve oyuncu gelişim işini hızlandıran Lite analiz ürünü” olarak büyüt.
+
+Senin için bu proje sadece ticari ürün değil; aynı zamanda kariyer hikayesi. Başarısız olsa bile iyi yapılmış bir versiyonu seni yazılımcı-antrenör olarak çok ayrıştırır. Başarılı olursa zaten hem ürün hem portfolyo kazanırsın.
+
+
+yani sen söyleylince görüntü işlemede tribün/drone çekiminde videodan analiz çıkarma konusunda tereddütlerim oluştu
+
+Birkaç saniye düşündüm
+Bu tereddüt çok sağlıklı. Hatta bence iyi oldu. Çünkü bu projede en tehlikeli şey “görüntü işleme kesin çalışır” diye varsaymak olurdu.
+
+Ama tereddüt etmen “projeden vazgeç” anlamına gelmiyor. Sadece ürünün merkezini daha doğru kurmak gerekiyor.
+
+Benim net görüşüm şu:
+
+Tribün/drone videosundan analiz çıkarma mümkün, ama ilk versiyonda hedef “tam otomatik maç analizi” olmamalı. Hedef “yarı otomatik, antrenöre zaman kazandıran analiz asistanı” olmalı.
+
+Bu fark çok önemli.
+
+Gerçekçi risk nerede?
+En zor kısımlar şunlar:
+
+1. Topu takip etmek zor
+Top küçük, hızlı, bazen oyuncuların altında kalıyor, bazen görüntüde kayboluyor. Drone çekiminde bile top detection güvenilir olmayabilir.
+
+Bu yüzden ilk aşamada şunları hedefleme:
+
+otomatik pas tespiti,
+
+otomatik şut tespiti,
+
+otomatik top kaybı,
+
+kusursuz possession,
+
+xG benzeri event analizi.
+
+Bunlar sonraki aşama.
+
+2. Oyuncu kimliğini korumak zor
+Sistem bir oyuncuyu 10 dakika boyunca aynı ID ile takip etmeyebilir. Oyuncular birbirine yakınlaşınca, forma numarası görünmeyince, kamera açısı bozulunca ID swap olabilir.
+
+Bu yüzden ilk aşamada:
+
+“Arda’nın maç boyu birebir tam tracking’i”
+yerine,
+
+“takım şekli, blok mesafesi, savunma hattı, kompaktlık”
+
+daha gerçekçi.
+
+3. Kamera standardı çok önemli
+Her video aynı kaliteyi vermez.
+
+İyi sonuç için:
+
+saha mümkün olduğunca tam görünmeli,
+
+kamera sabit olmalı,
+
+çözünürlük yeterli olmalı,
+
+oyuncular birbirinden ayrılabilir olmalı,
+
+saha çizgileri görünmeli,
+
+çok yakın/çok hareketli telefon videosu olmamalı.
+
+Yani ürünün bir “çekim standardı” olmalı. Her videoyu analiz edeceğim dersen zorlanırsın.
+
+Ama hâlâ yapılabilir olan ne?
+Bence yapılabilir ve değerli olan ilk ürün şu:
+
+Video input:
+drone veya yüksek tribün/kule çekimi,
+
+mümkünse sabit kamera,
+
+ilk etapta 2-5 dakikalık segmentlerle test.
+
+Analiz output:
+oyuncu konumları yaklaşık çıkarılır,
+
+saha koordinatına dönüştürülür,
+
+takım boyu hesaplanır,
+
+takım genişliği hesaplanır,
+
+kompaktlık hesaplanır,
+
+savunma hattı sapması bulunur,
+
+bloklar arası mesafe çıkarılır,
+
+sistem “olası taktiksel uyarı” üretir,
+
+antrenör bu uyarıyı onaylar/reddeder,
+
+onaylanan uyarıdan klip ve rapor oluşur.
+
+Bu çok daha gerçekçi.
+
+Zaten mevcut proje tarafında da gerçek YOLO/video analizi/otomatik klip üretiminin henüz olmadığını, mevcut yapının daha çok demo/MVP ve mock/stub seviyesinde olduğunu görmüştük. 
+
+ Bu yüzden sıradaki aşamayı “tam otomatik AI” değil, “kontrollü gerçek analiz pipeline’ı” olarak kurmak en doğru yol.
+
+Ürünün yönünü nasıl değiştirmelisin?
+Ben olsam projeyi şöyle konumlandırırdım:
+
+Yanlış konumlandırma
+“Videoyu yükle, AI tüm maçı otomatik analiz etsin.”
+
+Bu çok iddialı ve teknik risk yüksek.
+
+Doğru konumlandırma
+“Videoyu yükle, sistem saha üzerindeki takım şeklini ve olası taktiksel anları çıkarır; antrenör bunları onaylayarak hızlı rapor ve klip oluşturur.”
+
+Bu daha gerçekçi, daha güvenilir ve daha satılabilir.
+
+Yani sistem bir AI antrenör değil, bir analiz asistanı olmalı.
+
+İlk MVP’de “human-in-the-loop” olmalı
+Bu proje için bence kilit kavram bu:
+
+AI önerir → antrenör onaylar → sistem raporlar
+Örneğin sistem şöyle demeli:
+
+“12:43 - 12:51 arasında olası savunma hattı bozulması tespit edildi. Sol stoper hat ortalamasının yaklaşık 5.6 m gerisinde görünüyor. Antrenör onayı önerilir.”
+
+Sonra antrenör:
+
+onaylar,
+
+reddeder,
+
+klip oluşturur,
+
+not ekler,
+
+rapora dahil eder.
+
+Bu yaklaşım teknik hataları tolere eder. Ayrıca antrenörün kontrol hissini korur.
+
+Drone mu, tribün mü?
+İkisi de olabilir ama öncelik sırası şöyle olmalı:
+
+1. Sabit yüksek tribün/kule kamerası
+Bence ilk test için en mantıklısı bu.
+
+Avantaj:
+
+drone izni yok,
+
+daha stabil,
+
+operasyon daha kolay,
+
+kulüp için uygulanabilir,
+
+rüzgar/gimbal sorunu az,
+
+tekrar edilebilir çekim standardı kurulabilir.
+
+Dezavantaj:
+
+perspektif daha fazla,
+
+sahanın tamamı görünmeyebilir,
+
+uzak köşeler zor olabilir.
+
+Ama MVP için daha pratik.
+
+2. Drone
+Drone teknik olarak güzel ama operasyonel riski yüksek.
+
+Avantaj:
+
+kuşbakışı çok iyi,
+
+homografi daha kolay,
+
+takım şekli daha net,
+
+saha koordinatı daha sağlıklı.
+
+Dezavantaj:
+
+izin/saha güvenliği,
+
+hava koşulu,
+
+pil,
+
+pilot,
+
+gimbal hareketi,
+
+her kulüp için uygulanabilirlik düşük.
+
+Bu yüzden drone’u ilk günden ana gereklilik yapma. “Premium çekim modu” gibi düşün.
+
+3. Telefon/tablet
+Bunu ilk otomatik analiz için hedefleme. Telefon videosu daha çok:
+
+manuel klip,
+
+basit etiketleme,
+
+antrenör notu,
+
+rapor eki
+
+için kullanılabilir.
+
+İlk teknik validasyon nasıl yapılmalı?
+Bence projeye devam etmeden önce büyük yazılım geliştirme yerine şu mini deneyleri yap.
+
+Deney 1 — 2 dakikalık video testi
+Bir tribün/kule/drone videosu al.
+
+Hedef:
+
+oyuncular tespit ediliyor mu?
+
+saha çizgileri görünüyor mu?
+
+kalibrasyon yapılabiliyor mu?
+
+koordinatlar anlamlı mı?
+
+Başarı kriteri:
+
+Oyuncuların %70-80’i çoğu frame’de tespit ediliyor.
+Takım şekli yaklaşık çıkarılabiliyor.
+Topu umursama.
+
+Deney 2 — Takım şekli metriği
+Aynı videodan sadece şunu çıkar:
+
+takım boyu,
+
+takım genişliği,
+
+kompaktlık,
+
+savunma hattı.
+
+Başarı kriteri:
+
+Bir antrenör bu grafiğe/klibe bakınca “evet burada takım uzamış” diyebiliyor mu?
+Bu evetse ürünün çekirdeği var.
+
+Deney 3 — Klip + rapor
+Tek bir alert üret:
+
+“Bloklar arası kopukluk adayı.”
+
+Sonra:
+
+8 saniyelik klip kes,
+
+rapora koy,
+
+antrenöre göster.
+
+Başarı kriteri:
+
+Antrenör “bu klibi oyunculara gösteririm” diyor mu?
+Bence en kritik validasyon bu.
+
+Ürün hedefini daraltırsan risk azalır
+İlk sürümde şu özellikleri kesinlikle ertele:
+
+top tracking,
+
+pas tespiti,
+
+şut tespiti,
+
+gol pozisyonu tespiti,
+
+otomatik oyuncu kimliği,
+
+otomatik forma numarası okuma,
+
+gelişmiş scouting skorları,
+
+xG,
+
+canlı analiz.
+
+İlk sürümde şunlara odaklan:
+
+video upload,
+
+saha kalibrasyonu,
+
+oyuncu detection,
+
+yaklaşık tracking,
+
+takım şekli metrikleri,
+
+taktiksel uyarı adayları,
+
+klip,
+
+rapor,
+
+antrenör onayı.
+
+Bu haliyle proje hâlâ çok değerli.
+
+Bu tereddüt projeyi öldürmeli mi?
+Hayır. Sadece seni daha doğru yola sokmalı.
+
+Şunu kabul edersen proje hâlâ çok mantıklı:
+
+“Ben ilk aşamada kusursuz otomatik futbol analizi yapmıyorum. Antrenörün video izleme ve rapor çıkarma süresini azaltan yarı otomatik analiz asistanı yapıyorum.”
+
+Bu çok daha yapılabilir.
+
+Benim nihai görüşüm
+Görüntü işleme kısmı zor, evet. Özellikle top ve event detection tarafı zor.
+
+Ama takım şekli analizi için görüntü işleme daha yapılabilir:
+
+oyuncu bbox,
+
+saha koordinatı,
+
+takım centroid’i,
+
+savunma hattı,
+
+kompaktlık,
+
+blok mesafesi.
+
+Bunlar senin ilk ürün çekirdeğin olmalı.
+
+Yani fikri şöyle yeniden adlandırabilirsin:
+
+PitchVision Lite v1: Team Shape & Tactical Clip Assistant
+
+Bu isimlendirme bile seni daha gerçekçi hedefe taşır.
+
+Özetle:
+
+Tereddüt etmen doğru. Vazgeçmen gerekmez. Hedefi daraltman gerekir.
+“Tam otomatik maç analizi”ni sonraya bırak.
+“Yarı otomatik takım şekli + klip + rapor asistanı” ile başla.
+
+
+projenin ana yapısından uzaklaşmak pek istemiyorum. yani büyük firmalar yapıyorsa mac analizini veya antrenman analizini drone ile, biz de yapabiliriz. bunun için çözüm üretmek bana kalırsa daha sağlıklı bir çözüm olacak. sağlıklı vs olmaz diyip geri adım atmak mantıklı değil. 
+
+Birkaç saniye düşündüm
+Haklısın. Burada geri adım atmak yerine problemi mühendislik problemi olarak parçalara bölmek daha doğru.
+
+Benim önceki uyarım “bu olmaz” anlamında değildi; daha çok “hedefi doğru sıraya koymazsak proje bataklığa döner” uyarısıydı. Ama senin dediğin perspektif doğru:
+
+Büyük firmalar drone/kamera ile maç ve antrenman analizi yapıyorsa, bu teknik olarak yapılabilir. Bizim farkımız bunu daha dar, daha kontrollü ve amatör/gençlik seviyesine uygun şekilde çözmek olmalı.
+
+Yani ana yapıdan uzaklaşmadan devam edebiliriz.
+
+Ana vizyondan vazgeçme
+Projenin ana vizyonu şu kalmalı:
+
+Drone veya yüksek açı video kaydından maç/antrenman görüntüsü alınır, görüntü işleme ile oyuncu/top/saha verisi çıkarılır, bu veri taktiksel metriklere, kliplere, oyuncu pasaportuna ve rapora dönüşür.
+
+Bu doğru vizyon.
+
+Ama bunu başarmak için yol şöyle olmalı:
+
+Tam otomatik analiz hedefi
+↓
+Kontrollü çekim standardı
+↓
+Güvenilir saha kalibrasyonu
+↓
+Oyuncu tracking
+↓
+Takım şekli metrikleri
+↓
+Top/event analizi
+↓
+Gelişmiş scouting
+Yani vizyondan vazgeçmiyoruz. Sadece teknik sırayı gerçekçi kuruyoruz.
+
+Drone analizi için doğru yaklaşım
+Bence bu projeyi tekrar netleştirelim:
+
+PitchVision Lite’ın gerçek çekirdeği
+Drone / yüksek açı video → saha koordinatı → oyuncu tracking → taktiksel analiz → klip + rapor.
+
+Bu çekirdekten uzaklaşmana gerek yok.
+
+Hatta bence bu çekirdek seni farklılaştırır. Çünkü çoğu amatör analiz ürünü sadece manuel video etiketleme veya basit klip kesme yapıyor. Senin farkın:
+
+saha koordinatı,
+
+takım şekli,
+
+blok mesafesi,
+
+kompaktlık,
+
+savunma hattı,
+
+oyuncu gelişim verisi.
+
+Ama çözümün şartı: çekim standardı
+Büyük firmaların bunu yapabilmesinin sebebi sadece model değil. Asıl sebep şu:
+
+standart kamera yerleşimi,
+
+yüksek kaliteli görüntü,
+
+kalibrasyon,
+
+saha referansları,
+
+güçlü pipeline,
+
+çok veri,
+
+model iyileştirme döngüsü.
+
+Sen de aynı mantığı daha küçük ölçekte kurmalısın.
+
+Yani ürün şunu dememeli:
+
+“Herhangi bir videoyu yükle, biz analiz ederiz.”
+
+Ürün şunu demeli:
+
+“PitchVision çekim standardına uygun drone/yüksek açı video yükle, sistem taktiksel analiz üretir.”
+
+Bu geri adım değil. Bu profesyonel ürün standardıdır.
+
+Çözüm stratejisi
+Bence projeyi şu isimle yeniden konumlandır:
+
+PitchVision Lite v1
+Drone-Based Team Shape & Tactical Report System
+
+Ama Türkçe ürün diliyle:
+
+“Drone ve yüksek açı maç videolarından takım şekli, oyuncu konumları, taktiksel uyarılar ve rapor üreten analiz platformu.”
+
+Bu hâlâ senin ana fikrin. Hatta daha net.
+
+Drone/video analizini mümkün kılacak teknik plan
+1. Çekim standardı oluştur
+İlk teknik çözüm model değil, çekim protokolü.
+
+Bir “PitchVision Capture Standard” tanımla.
+
+Örnek:
+
+Video çözünürlüğü: minimum 1080p, tercihen 4K
+FPS: 25/30 fps
+Kamera açısı: saha mümkün olduğunca tam görünmeli
+Drone yüksekliği: saha boyutuna göre sabit aralık
+Gimbal: aşağı eğimli, mümkün olduğunca sabit
+Zoom: analiz boyunca değişmemeli
+Saha çizgileri: görünür olmalı
+Işık: mümkünse gündüz / yeterli aydınlatma
+Video süresi: ilk testlerde 2-5 dakikalık segment
+Format: MP4 / MOV
+Bunu yapmazsan görüntü işleme sürekli farklı sorunlarla boğuşur.
+
+Bu bir kısıtlama değil, ürünün kalite garantisi.
+
+2. İlk hedefi “top” değil “oyuncu + saha” yap
+Drone videosunda top küçük olabilir. Ama oyuncular daha tutarlı tespit edilir.
+
+Bu yüzden analiz sırası şöyle olmalı:
+
+V1
+oyuncu detection,
+
+oyuncu tracking,
+
+saha homografi,
+
+takım şekli,
+
+savunma hattı,
+
+blok mesafesi,
+
+kompaktlık,
+
+klip/rapor.
+
+V2
+top detection,
+
+topa en yakın oyuncu,
+
+possession tahmini,
+
+top kazanımı/kaybı adayları.
+
+V3
+pas/şut/event detection,
+
+transition detection,
+
+oyuncu aksiyon skorları.
+
+Yani ana hedef maç analizi; ama yapı katmanlı ilerliyor.
+
+3. Homografi bu projenin merkezinde olmalı
+Drone/yüksek açı analizinde en kritik nokta şu:
+
+Piksel koordinatı değil, saha koordinatı üzerinden analiz yapacağız.
+
+Yani her oyuncu için:
+
+pixel_x, pixel_y → field_x, field_y
+Bu olduğu anda şunlar mümkün olur:
+
+takım boyu,
+
+genişlik,
+
+oyuncu arası mesafe,
+
+blok mesafesi,
+
+savunma hattı,
+
+pres mesafesi,
+
+oyuncu hızları,
+
+koşu yönleri,
+
+alan kullanımı.
+
+Bu nedenle Phase 3’te en kritik modül YOLO’dan bile önce:
+
+FieldCalibration + CoordinateTransform
+olmalı.
+
+Mevcut projede homografi için temel modül eklenmiş ve OpenCV şart olmadan çalışacak hale getirilmişti; bu iyi bir başlangıç. 
+
+
+4. Drone görüntüsünde model stratejisi
+Local model ile başlanmalı.
+
+Bence sıralama şöyle:
+
+Aşama 1 — Hazır YOLO ile test
+İlk olarak YOLOv8n/s veya güncel Ultralytics küçük model ile 2-3 drone/tribün videosunda test yapılır.
+
+Hedef:
+
+Oyuncuların çoğu tespit ediliyor mu?
+Saha uzaklığında bbox stabil mi?
+Drone yüksekliğinde model oyuncuları insan olarak görüyor mu?
+Burada başarı kriteri:
+
+%70+ oyuncu tespiti çoğu frame’de yakalanıyorsa devam.
+Aşama 2 — Kendi veri setin
+Hazır model yetmezse, ki muhtemelen bir noktada yetmeyecek, kendi veri setin gerekir.
+
+İlk veri seti:
+
+500-1000 frame
+Sınıflar:
+
+player
+goalkeeper
+referee
+ball
+Ama ilk eğitimde sadece player bile olabilir.
+
+Etiketleme araçları:
+
+CVAT
+
+Roboflow
+
+Label Studio
+
+makesense.ai
+
+Aşama 3 — Fine-tune
+Kendi drone/tribün görüntülerinle fine-tune.
+
+Model adı örneği:
+
+pitchvision-player-detector-v1.pt
+Model repo’ya direkt konmaz. Git LFS veya ayrı model klasörü kullanılır.
+
+5. Tracking tarafı
+Drone analizinde tek tek oyuncu kimliğini %100 korumak zor, ama takım şekli için bu şart değil.
+
+İlk hedef:
+
+Oyuncu noktalarını sahaya yerleştir ve takım şeklini çıkar.
+Kullanılabilecek tracker:
+
+ByteTrack başlangıç için iyi.
+
+BoT-SORT daha sonra denenebilir.
+
+DeepSORT görünüm bazlı ama forma/uzak çekim sorunları olabilir.
+
+İlk amaç:
+
+track_id mükemmel olsun
+değil.
+
+İlk amaç:
+
+her frame’de oyuncu bulutu ve takım şekli güvenilir olsun
+olmalı.
+
+Bence ürünün teknik iddiası şöyle olmalı
+Bu cümleyi kendine ana strateji yapabilirsin:
+
+“PitchVision Lite, tam otomatik event detection’dan önce, drone/yüksek açı görüntüden saha koordinatlı takım şekli analizi üretir.”
+
+Bu çok güçlü ve yapılabilir bir iddia.
+
+Çünkü takım şekli analizi için topa bile her zaman gerek yok.
+
+Yol haritasını ana fikre sadık şekilde güncelleyelim
+Phase 2 — Production Core Pipeline
+Değişmiyor.
+
+auth
+
+upload
+
+storage
+
+job queue
+
+processing status
+
+Bu faz görüntü işleme yapmaz, ama görüntü işleme için zemini hazırlar.
+
+Phase 3 — Drone CV Foundation
+Branch:
+
+phase-3/drone-cv-foundation
+Bu fazın hedefi:
+
+Drone/yüksek açı videodan saha koordinatlı oyuncu verisi üretmek.
+
+İçerik:
+
+video frame extraction,
+
+calibration frame,
+
+manual saha kalibrasyonu,
+
+YOLO detector local setup,
+
+player detection,
+
+tracker,
+
+pixel → field transform,
+
+TrackPoint DB kayıtları,
+
+debug overlay video.
+
+Başarı kriteri:
+
+2 dakikalık drone/tribün videosunda oyuncu noktalarını saha üzerinde göstermek.
+Phase 4 — Tactical Metrics From Drone
+Branch:
+
+phase-4/tactical-metrics-from-drone
+Hedef:
+
+Saha koordinatlı track verisinden gerçek taktiksel metrik üretmek.
+
+İçerik:
+
+team length,
+
+team width,
+
+compactness,
+
+defensive line,
+
+block gap,
+
+average positions,
+
+heatmap,
+
+alert candidates,
+
+confidence score.
+
+Başarı kriteri:
+
+Bir maç segmentinden 3-5 anlamlı taktiksel uyarı adayı çıkar.
+Phase 5 — Clips & Coach Report
+Branch:
+
+phase-5/clips-coach-report
+Hedef:
+
+Drone analizini antrenör çıktısına dönüştürmek.
+
+İçerik:
+
+alert time range,
+
+FFmpeg clip cutting,
+
+thumbnails,
+
+report snapshot,
+
+HTML/PDF report,
+
+drill recommendation,
+
+coach approval flow.
+
+Başarı kriteri:
+
+Antrenöre gösterilebilir PDF rapor + klip listesi oluşur.
+Phase 6 — Ball & Event Detection
+Branch:
+
+phase-6/ball-event-detection
+Bunu erken yapma ama vizyondan çıkarma.
+
+İçerik:
+
+ball detector fine-tune,
+
+ball trajectory smoothing,
+
+nearest-player possession,
+
+pass candidate,
+
+shot candidate,
+
+recovery/loss candidate,
+
+transition start.
+
+Başarı kriteri:
+
+Tam otomatik değil, event adayları üretir.
+“Büyük firmalar yapıyorsa biz de yapabiliriz” kısmı
+Evet, yapılabilir. Ama onların yaptığı şeyin arkasında şu vardır:
+
+standart çekim
++ iyi veri
++ iyi kalibrasyon
++ model eğitimi
++ insan doğrulaması
++ sürekli feedback
+Senin avantajın şu olabilir:
+
+daha dar hedef,
+
+tek ülke/tek segment,
+
+gençlik/amatör futbol odaklı,
+
+daha sade rapor,
+
+daha ucuz operasyon,
+
+antrenör gözüyle ürün tasarımı.
+
+Yani büyüklerin yaptığını birebir kopyalamayacaksın. Onların mantığını alıp daha erişilebilir hale getireceksin.
+
+Bu durumda ben nasıl öneri değiştiriyorum?
+Önceki önerimi şöyle revize ediyorum:
+
+Eski uyarı:
+
+“Tam otomatik analize hemen girme.”
+
+Bu hâlâ doğru.
+
+Ama yeni net önerim:
+
+“Ana vizyondan vazgeçme. Drone/yüksek açı görüntü analizini projenin merkezi yap. Fakat ilk teknik başarıyı event detection değil, saha koordinatlı oyuncu tracking + takım şekli analizi olarak tanımla.”
+
+Bu senin vizyonuna daha uygun.
+
+Local geliştirme nasıl olmalı?
+Local ortamda şu test pipeline’ını kur:
+
+1. Gerçek video klasörü
+data/sample_videos/
+  drone_u15_2min.mp4
+  tribune_u17_2min.mp4
+2. Frame extraction
+outputs/match_001/frames/
+3. Calibration
+outputs/match_001/calibration.json
+4. Detection
+outputs/match_001/detections.parquet
+5. Tracking
+outputs/match_001/tracks.parquet
+6. Field coordinates
+outputs/match_001/field_tracks.parquet
+7. Debug overlay
+outputs/match_001/debug_overlay.mp4
+8. Metrics
+outputs/match_001/metrics.json
+9. Alerts
+outputs/match_001/alerts.json
+10. Report
+outputs/match_001/report.html
+Bu lokal pipeline çalıştığında, ürünü ciddi şekilde ilerletmiş olursun.
+
+Çok net teknik başarı kriteri
+Bence sıradaki gerçek hedefin şu olmalı:
+
+Bir drone/yüksek açı maç videosundan:
+1. oyuncuları tespit et,
+2. saha koordinatına çevir,
+3. takım şeklini çiz,
+4. savunma hattını göster,
+5. 1-2 taktiksel uyarı üret,
+6. ilgili klibi kes,
+7. rapora koy.
+Bu başarıldığında proje fikri ciddi anlamda doğrulanır.
+
+Sonuç
+Senin itirazın doğru:
+
+“Sağlıklı olmaz” diyerek geri adım atmak mantıklı değil.
+
+Daha doğru yaklaşım:
+
+“Bunu sağlıklı hale getirmek için çekim standardı, kalibrasyon, local model, tracker, confidence score ve antrenör onayı sistemini kurmamız gerekiyor.”
+
+Yani projeden uzaklaşmıyoruz. Tam tersine, ana fikri daha mühendislik odaklı hale getiriyoruz.
+
+Bence vizyon şu şekilde korunmalı:
+
+PitchVision Lite, drone/yüksek açı futbol videosundan saha koordinatlı analiz üreten, amatör ve gençlik futboluna uygun düşük maliyetli maç/antrenman analiz platformudur.
+
+Ve ilk teknik hedef:
+
+Drone/yüksek açı videodan güvenilir oyuncu tracking + takım şekli analizi.
+
+Bu hedef hem ana vizyona sadık hem de uygulanabilir.
+
+
+
+Haklısın. Burada geri adım atmak yerine **problemi mühendislik problemi olarak parçalara bölmek** daha doğru.
+
+burası ve sonrasında verdiğin bütün yanıtları önceki yanıtlarda verdiği gibi faz 2 için ihtiyacı olunan bütün gerekli promptları detaylı ve doğru çıktı verecek şekilde çıkart. 
+faz 2 ye başlayalım. yol haritamızı da ver. sornasında başlayalım allah utandırmasın
+
+Başlayalım. Faz 2’yi “drone/yüksek açı analiz vizyonundan kopmadan, gerçek ürün altyapısını kurma fazı” olarak kurgulayacağım; yani bu fazda YOLO’ya girmeden, YOLO’nun güvenle çalışacağı upload–storage–job–status omurgasını hazırlayacağız.
+
+4s boyunca düşündüm
+Allah utandırmasın. Bence şimdi en doğru noktadayız: fikrin ana vizyonundan geri adım atmadan, işi fazlara bölüp profesyonel şekilde ilerleyeceğiz.
+
+Şu an mevcut branch’i şu kabul ediyoruz:
+
+milestone/phase-1-pitchvision-lite-mvp
+Bu branch’in anlamı:
+
+Phase 1 — PitchVision Lite MVP Foundation
+
+Yani UI, temel backend, demo/mock akış, analytics testleri, /api/v1 hizalaması, temel kalite kontrol ve README MVP özeti var. Ancak gerçek video analizi / YOLO / klip üretimi henüz üretim seviyesinde değil; mevcut yapıda bazı alanlar stub/demo seviyesinde kalmış durumda. Cursor çıktısında da gerçek YOLO/video analizi/otomatik klip üretiminin açık kaldığı, start_match_processing tarafının çoğunlukla durum güncellediği belirtilmişti. 
+
+
+Şimdi başlayacağımız faz:
+
+phase-2/production-core-pipeline
+Bu fazın amacı:
+
+Gerçek kullanıma hazırlanacak çekirdek ürün altyapısını kurmak.
+
+Yani bu fazda ana hedefimiz YOLO değil. Ana hedefimiz:
+
+Gerçek kullanıcı
+→ gerçek organizasyon/takım izolasyonu
+→ gerçek video upload
+→ gerçek storage
+→ gerçek async processing job
+→ gerçek processing status
+→ frontend’in bu akışa bağlanması
+Drone/yüksek açı analiz vizyonu korunuyor. Ama önce bu görüntü işleme sisteminin üzerinde çalışacağı sağlam zemini kuruyoruz.
+
+Phase 2 ana yol haritası
+Phase 2 adı
+Production Core Pipeline
+Branch adı
+phase-2/production-core-pipeline
+Faz hedefi
+Phase 2 sonunda sistem şunu yapabilmeli:
+
+1. Kullanıcı giriş yapar.
+2. Kendi organizasyonuna bağlı takımı/maçı görür.
+3. Yeni maç oluşturur.
+4. Video yükler.
+5. Video güvenli şekilde storage’a kaydedilir.
+6. Video metadata çıkarılır.
+7. Kullanıcı işleme sürecini başlatır.
+8. Backend async processing job oluşturur.
+9. Processing status ekranı gerçek job durumunu gösterir.
+10. Job şimdilik mock CV pipeline ile ilerler.
+11. Sistem ileride YOLO/drone CV pipeline’ın bağlanacağı hazır altyapıyı oluşturur.
+Phase 2’de yapılacak ana işler
+1. Auth ve multi-tenant güvenlik
+Bu en kritik iş.
+
+Şu anda demo kolaylığı için token yoksa ilk kullanıcıya düşme gibi davranışlar üretim için riskli görülmüş. 
+
+ Bunu kaldıracağız.
+
+Yapılacaklar:
+
+JWT tabanlı auth.
+
+Register/login.
+
+Password hashing.
+
+Current user dependency.
+
+Organization scoped queries.
+
+Role-based access control.
+
+Demo kullanıcılar explicit credentials ile çalışmalı.
+
+Başka organizasyonun verisine erişim engellenmeli.
+
+2. Video upload ve storage
+Bu fazda gerçek video upload çalışmalı.
+
+Yapılacaklar:
+
+MP4/MOV upload.
+
+MIME validation.
+
+Dosya boyutu limiti.
+
+Local storage backend.
+
+MinIO/S3 abstraction.
+
+Signed URL altyapısı.
+
+VideoAsset modeli.
+
+Video metadata extraction:
+
+duration
+
+fps
+
+width
+
+height
+
+codec
+
+3. Async processing job
+YOLO burada çalışmayacak ama sistem iş kuyruğu mantığıyla çalışacak.
+
+Yapılacaklar:
+
+Redis + RQ veya Celery.
+
+MatchProcessingJob modeli.
+
+Processing state machine.
+
+/matches/{id}/process job başlatmalı.
+
+/matches/{id}/processing-status gerçek durum döndürmeli.
+
+Retry endpoint.
+
+Error message.
+
+Progress percent.
+
+Duplicate job engelleme.
+
+4. Frontend gerçek API bağlantısı
+Mock mode korunacak ama gerçek mode çalışmalı.
+
+Yapılacaklar:
+
+NEXT_PUBLIC_USE_MOCKS=true ise mevcut demo bozulmayacak.
+
+NEXT_PUBLIC_USE_MOCKS=false ise:
+
+login gerçek API,
+
+upload gerçek API,
+
+processing status gerçek API,
+
+match detail gerçek API,
+
+error/loading state gerçek veriye göre çalışacak.
+
+5. Test ve kalite
+Phase 2 bitmeden test eklenmeli.
+
+Yapılacaklar:
+
+Auth tests.
+
+Organization isolation tests.
+
+Upload validation tests.
+
+Processing state machine tests.
+
+API smoke tests.
+
+README Phase 2 Status.
+
+.env.example güncellemesi.
+
+Docker Compose kontrolü.
+
+Phase 2’de özellikle yapılmayacaklar
+Bu çok önemli. Fazın dağılmaması için bazı şeyleri bilinçli olarak erteleyeceğiz.
+
+Phase 2’de yapılmayacaklar:
+
+Gerçek YOLO entegrasyonu yok.
+Gerçek ByteTrack entegrasyonu yok.
+Top tracking yok.
+Pas/şut/event detection yok.
+Gerçek otomatik taktiksel analiz yok.
+Otomatik saha çizgisi tespiti yok.
+Gelişmiş scouting yok.
+Billing yok.
+Canlı analiz yok.
+Bunlar Phase 3 ve sonrası.
+
+Phase 2’nin amacı:
+
+CV için sağlam ürün altyapısını kurmak.
+
+Phase 2 başarı kriteri
+Phase 2 tamamlandı demek için şu checklist tamam olmalı:
+
+[ ] Kullanıcı register/login olabiliyor.
+[ ] Token olmadan protected endpoint çalışmıyor.
+[ ] Kullanıcı sadece kendi organization verisini görebiliyor.
+[ ] Başka organization match/player/report erişimi engelleniyor.
+[ ] Maç oluşturulabiliyor.
+[ ] Video upload edilebiliyor.
+[ ] Video storage’a kaydediliyor.
+[ ] Video metadata çıkarılıyor.
+[ ] Processing job oluşturuluyor.
+[ ] Processing status gerçek job’dan okunuyor.
+[ ] Job failed/completed durumuna geçebiliyor.
+[ ] Retry çalışıyor.
+[ ] Frontend upload ekranı gerçek API’ye bağlı.
+[ ] Frontend processing ekranı gerçek status gösteriyor.
+[ ] Mock mode bozulmadı.
+[ ] Backend testleri geçiyor.
+[ ] README Phase 2 Status güncellendi.
+[ ] Docker Compose ile sistem ayağa kalkıyor.
+Faz 2 için önerilen çalışma sırası
+Şimdi sana Cursor/Codex/Kiro gibi coding AI aracına vereceğin detaylı prompt setini çıkarıyorum.
+
+Bunları tek tek kullanmanı öneririm.
+
+Sıra şu:
+
+Prompt 0 — Branch oluşturma ve repo analizi
+Prompt 1 — Phase 2 teknik planı
+Prompt 2 — Auth ve multi-tenant güvenlik
+Prompt 3 — Organization isolation testleri
+Prompt 4 — Video upload + storage abstraction
+Prompt 5 — Video metadata extraction
+Prompt 6 — Async processing job pipeline
+Prompt 7 — Processing status frontend integration
+Prompt 8 — Upload frontend integration
+Prompt 9 — Mock/demo mode korunumu
+Prompt 10 — Phase 2 kalite kontrol
+Prompt 11 — README + commit + push
+PROMPT 0 — Branch oluştur ve mevcut durumu analiz et
+Bunu ilk ver.
+
+Current repository: https://github.com/umutcangultenn/pitchvision
+
+Current branch:
+milestone/phase-1-pitchvision-lite-mvp
+
+Create a new branch from the current branch:
+
+phase-2/production-core-pipeline
+
+Before implementing anything, inspect the existing monorepo in detail.
+
+I want Phase 2 to focus on production-core-pipeline, not YOLO yet.
+
+Context:
+PitchVision Lite is a football match/training analysis SaaS for amateur clubs, football schools and U8-U17 academies. The long-term vision is drone/high-angle video analysis, homography, player tracking, tactical metrics, clips, reports and player passports. But Phase 2 must only build the production-ready core infrastructure required before real CV/YOLO work.
+
+Please inspect:
+- monorepo structure
+- backend FastAPI app
+- existing models
+- existing routes
+- auth/current user behavior
+- organization/team/match/player relationships
+- frontend routes
+- frontend API client
+- mock mode / NEXT_PUBLIC_USE_MOCKS
+- upload/video handling
+- processing status implementation
+- tests
+- Docker Compose
+- README
+
+Return a detailed report:
+
+1. Current architecture summary
+2. What is production-ready
+3. What is demo/mock/stub
+4. What must be changed for Phase 2
+5. Risks
+6. Proposed implementation order
+7. Files likely to change
+
+Important:
+Do not implement code yet.
+Do not add YOLO yet.
+Do not change UI design in this step.
+Beklenen çıktı:
+
+Projeyi analiz edecek.
+
+Hangi dosyalar değişecek göreceksin.
+
+Sonra kodlamaya başlayacağız.
+
+PROMPT 1 — Phase 2 planını netleştir
+Bu prompt, AI’nin kendi kafasına göre dağılmasını engeller.
+
+Based on the repository inspection, create a concrete Phase 2 implementation plan for PitchVision Lite.
+
+Phase 2 name:
+Production Core Pipeline
+
+Branch:
+phase-2/production-core-pipeline
+
+Phase 2 goal:
+Turn the current demo/MVP into a real multi-user, organization-scoped, upload-capable, async-processing-ready product foundation.
+
+Important:
+Do not implement YOLO or real CV yet.
+Keep the long-term drone/high-angle analysis vision, but Phase 2 must only prepare the infrastructure for it.
+
+The implementation plan must include:
+
+1. Auth and multi-tenant security
+- JWT auth
+- password hashing
+- current_user dependency
+- organization-scoped access
+- roles: Admin, Coach, Analyst, Scout, Viewer
+- remove unsafe “missing token = first user” behavior
+
+2. Video upload and storage
+- real upload endpoint
+- MP4/MOV validation
+- max file size config
+- local storage backend for development
+- S3/MinIO-compatible abstraction
+- signed URL abstraction
+- VideoAsset metadata
+
+3. Video metadata extraction
+- duration
+- fps
+- width
+- height
+- codec if available
+- ffprobe/OpenCV fallback if appropriate
+
+4. Async processing job
+- Redis + RQ or Celery
+- choose the simpler fit for the current project
+- MatchProcessingJob model
+- processing state machine
+- retry and error handling
+- idempotency
+
+5. Frontend integration
+- real login/upload/processing status in non-mock mode
+- mock mode preserved
+- loading/error states
+
+6. Testing
+- auth tests
+- organization isolation tests
+- upload tests
+- processing state tests
+- API smoke tests
+
+7. Documentation
+- README Phase 2 Status
+- .env.example
+- local development instructions
+
+Return the plan with:
+- implementation order
+- files to create/change
+- database migrations needed
+- test strategy
+- acceptance criteria
+
+Do not implement yet.
+PROMPT 2 — Auth ve multi-tenant güvenlik
+Bu en kritik prompt.
+
+Implement real authentication and multi-tenant access control for PitchVision Lite.
+
+Branch:
+phase-2/production-core-pipeline
+
+Context:
+The current project is Phase 1 MVP. Some auth/demo behavior may be unsafe for production, especially any behavior where a missing token falls back to the first user. Remove that.
+
+Requirements:
+
+1. Authentication
+- Add JWT-based authentication.
+- Add register endpoint if missing.
+- Add login endpoint that returns access token.
+- Use secure password hashing.
+- Add current_user dependency.
+- Protected routes must require a valid token.
+- Missing/invalid token must return 401.
+- Do not silently fall back to any demo user.
+
+2. User model and roles
+Support roles:
+- Admin
+- Coach
+- Analyst
+- Scout
+- Viewer
+
+If existing models already support roles, improve them.
+If not, add the minimal required fields.
+
+3. Multi-tenant organization isolation
+Every organization-scoped resource must be filtered by organization_id:
+- teams
+- matches
+- players
+- video assets
+- tactical alerts
+- reports
+- clips
+- scout notes
+- processing jobs
+
+Users must not access another organization’s data.
+
+4. Authorization
+Add helper/dependency functions:
+- require_user
+- require_org_access
+- require_role if appropriate
+
+Admin can manage organization resources.
+Coach/Analyst can create and analyze matches.
+Scout can access scouting/player-related features.
+Viewer can read allowed reports but cannot modify.
+
+Keep the implementation practical and MVP-level, but secure by default.
+
+5. Demo/seed behavior
+Demo users can still exist, but only through explicit login credentials.
+Do not use implicit fallback users.
+
+6. Tests
+Add tests for:
+- register/login success
+- invalid login
+- protected endpoint without token returns 401
+- user from organization A cannot access organization B match
+- user from organization A cannot access organization B player
+- role restriction where appropriate
+
+7. Documentation
+Update:
+- README auth section
+- .env.example for JWT secret/token expiry
+- seed credentials if any
+
+Important:
+- Do not implement video upload in this step.
+- Do not implement YOLO/CV in this step.
+- Do not break mock frontend mode.
+- Keep code modular and production-oriented.
+PROMPT 3 — Auth sonrası kalite kontrol
+Bunu Prompt 2’den sonra ver. Hemen upload’a geçme.
+
+Quality check the authentication and multi-tenant implementation.
+
+Run and verify:
+- backend unit tests
+- auth tests
+- organization isolation tests
+- API smoke tests if available
+
+Check manually in code:
+- no route uses implicit first-user fallback
+- no organization-scoped query is unfiltered
+- protected routes require current_user
+- 401/403 responses are consistent
+- seed/demo login works only through credentials
+- frontend mock mode is not broken
+
+If you find issues, fix them.
+
+Return:
+1. Summary of changes made
+2. Security risks fixed
+3. Remaining risks
+4. Test results
+5. Files changed
+PROMPT 4 — Video upload + storage abstraction
+Auth güvenli hale geldikten sonra upload’a geç.
+
+Implement real video upload and storage abstraction for PitchVision Lite.
+
+Context:
+Phase 2 goal is production-core-pipeline. The product vision is drone/high-angle video analysis, but this step only implements reliable upload/storage infrastructure. Do not implement YOLO yet.
+
+Requirements:
+
+1. Video upload endpoint
+Add or improve endpoint:
+POST /api/v1/matches/{match_id}/video
+
+Behavior:
+- Requires authenticated user.
+- User must belong to the match organization.
+- Accepts MP4/MOV video file.
+- Validates MIME type and extension.
+- Enforces max file size from config.
+- Creates or updates VideoAsset record.
+- Stores file using storage service.
+- Returns video asset metadata.
+
+2. Storage abstraction
+Create a storage service interface that supports:
+- save/upload file
+- get path/key
+- get signed read URL
+- delete file if needed
+
+Implement:
+- LocalStorageService for development
+- S3/MinIO-compatible interface or placeholder implementation with clear TODOs
+
+Local storage should be default.
+
+3. Configuration
+Add config values:
+- STORAGE_BACKEND=local
+- LOCAL_STORAGE_DIR
+- MAX_VIDEO_UPLOAD_MB
+- SIGNED_URL_EXPIRY_SECONDS
+- optional S3/MINIO config fields
+
+Update .env.example.
+
+4. VideoAsset model
+Ensure VideoAsset contains:
+- id
+- organization_id
+- match_id
+- original_filename
+- storage_backend
+- storage_key/path
+- mime_type
+- size_bytes
+- upload_status
+- created_at
+- updated_at
+
+Upload statuses:
+- created
+- uploading
+- uploaded
+- failed
+
+5. Security
+- Do not expose raw local file paths to unauthorized users.
+- Signed URL endpoint must require organization access.
+- Users cannot upload video to another organization’s match.
+
+6. Frontend
+Do not fully redesign UI.
+If existing upload page exists, only connect it minimally to the real endpoint when NEXT_PUBLIC_USE_MOCKS=false.
+Preserve mock mode.
+
+7. Tests
+Add tests:
+- upload valid MP4/MOV fixture
+- reject unsupported extension
+- reject unsupported MIME type
+- reject oversized file
+- reject upload to another organization’s match
+- signed URL requires auth/org access
+
+Important:
+- Do not implement metadata extraction yet unless already easy and isolated.
+- Do not implement processing job yet.
+- Do not implement YOLO/CV yet.
+PROMPT 5 — Video metadata extraction
+Upload’dan sonra metadata.
+
+Implement video metadata extraction for uploaded match videos.
+
+Context:
+The upload/storage system should already exist. Now add metadata extraction after a successful upload.
+
+Requirements:
+
+1. Metadata fields
+Extract and store:
+- duration_seconds
+- fps
+- width
+- height
+- frame_count if available
+- codec if available
+- container/format if available
+
+2. Implementation
+Create a modular service, for example:
+backend/app/services/video_metadata.py
+or existing appropriate module.
+
+Use one of:
+- ffprobe/ffmpeg if available
+- OpenCV fallback
+- graceful fallback if metadata cannot be extracted
+
+Do not make the whole upload fail if optional metadata extraction fails.
+But store metadata_status:
+- pending
+- extracted
+- failed
+
+3. Database
+Update VideoAsset or related model with metadata fields.
+Add migration if applicable.
+
+4. API response
+Video upload response should include available metadata.
+Match detail should include video asset metadata.
+
+5. Error handling
+If metadata extraction fails:
+- upload still succeeds
+- metadata_status becomes failed
+- error message is stored for debugging
+- frontend can show “metadata could not be extracted” but video remains uploaded
+
+6. Tests
+Add tests using a tiny generated video fixture:
+- metadata extracted successfully
+- invalid/corrupted video marks metadata failed
+- upload remains successful even if metadata extraction fails
+
+7. Documentation
+Update README with required local tools:
+- ffmpeg/ffprobe optional but recommended
+- OpenCV fallback if used
+
+Important:
+Do not implement YOLO.
+Do not implement frame extraction for analysis yet.
+This step is only metadata extraction.
+PROMPT 6 — Async processing job pipeline
+Şimdi iş kuyruğu.
+
+Implement async match processing job pipeline for PitchVision Lite.
+
+Context:
+Phase 2 is production-core-pipeline. Real CV/YOLO will come in Phase 3. This step should create the async processing infrastructure and state machine using a mock processing worker.
+
+Requirements:
+
+1. Queue choice
+Use Redis + RQ or Celery. Choose the simpler option that fits the existing repo and Docker Compose.
+Explain the choice briefly.
+
+2. Data model
+Add MatchProcessingJob model with:
+- id
+- organization_id
+- match_id
+- video_asset_id
+- status
+- progress_percent
+- current_step
+- error_message
+- attempts
+- started_at
+- completed_at
+- failed_at
+- created_at
+- updated_at
+
+Statuses:
+- created
+- queued
+- extracting_metadata
+- extracting_frames
+- waiting_calibration
+- detecting
+- tracking
+- calculating_metrics
+- generating_alerts
+- generating_clips
+- generating_report
+- completed
+- failed
+- cancelled optional
+
+3. API endpoints
+Implement:
+POST /api/v1/matches/{match_id}/process
+GET /api/v1/matches/{match_id}/processing-status
+POST /api/v1/matches/{match_id}/process/retry
+
+Behavior:
+- Requires auth.
+- Requires organization access.
+- Cannot process match without uploaded video.
+- If calibration is required but missing, job should move to waiting_calibration or return clear status.
+- Prevent duplicate active jobs for same match.
+- Retry only allowed for failed jobs.
+
+4. Worker behavior
+For Phase 2, worker can use mock processing steps.
+It should:
+- update status step by step
+- update progress_percent
+- optionally create placeholder analytics/report markers if existing app expects them
+- not run YOLO
+- not run real CV
+
+5. Docker Compose
+Add/update Redis and worker service if needed.
+Ensure backend, frontend, postgres, redis, worker can run together.
+
+6. Frontend
+Do not redesign the processing screen.
+Connect it to real status endpoint when NEXT_PUBLIC_USE_MOCKS=false.
+Show:
+- current step
+- progress
+- failed state
+- retry button
+- waiting_calibration state
+
+Preserve mock mode.
+
+7. Tests
+Add tests:
+- cannot process without auth
+- cannot process another organization’s match
+- cannot process match without video
+- process creates queued job
+- duplicate process call returns existing active job or clear conflict
+- status endpoint returns job status
+- retry failed job works
+- state transitions are valid
+
+8. Documentation
+Update README:
+- how to run worker
+- how to run Redis
+- processing state machine
+- Phase 2 limitations: mock CV only
+
+Important:
+Do not implement YOLO or real frame processing in this step.
+This is infrastructure only.
+PROMPT 7 — Saha kalibrasyonu ile processing ilişkisi
+Phase 2’de gerçek CV yok ama kalibrasyon gerekliliğini state machine’e dahil etmek mantıklı.
+
+Connect field calibration readiness to the processing pipeline.
+
+Context:
+PitchVision Lite’s long-term analysis depends on drone/high-angle video calibration and homography. Existing calibration modules may already exist. In Phase 2 we do not implement real CV, but processing status should correctly account for calibration readiness.
+
+Requirements:
+
+1. Calibration requirement
+For matches with video source:
+- drone
+- high_angle
+- tribune
+
+processing should require field calibration before detection/tracking steps.
+
+If calibration is missing:
+- processing job should enter waiting_calibration
+- frontend should show clear CTA: “Saha Kalibrasyonuna Git”
+- user can complete calibration and resume/retry processing
+
+2. Backend
+Ensure FieldCalibration belongs to:
+- organization_id
+- match_id
+- video_asset_id optional
+- homography matrix
+- calibration quality
+- point mappings
+- created_by
+
+Add missing fields if needed.
+
+3. API
+Ensure endpoints exist or improve:
+POST /api/v1/matches/{match_id}/calibration
+GET /api/v1/matches/{match_id}/calibration
+
+They must:
+- require auth
+- enforce organization access
+- validate minimum point count
+- store calibration payload
+- return calibration quality if available
+
+4. Processing
+When process starts:
+- if calibration missing and required, status becomes waiting_calibration
+- if calibration exists, job proceeds to mock detecting/tracking steps
+
+5. Frontend
+Processing screen should display waiting_calibration.
+Calibration screen should navigate back to processing or analysis after save.
+
+6. Tests
+Add tests:
+- processing drone match without calibration enters waiting_calibration
+- processing with calibration proceeds
+- user cannot create calibration for another org match
+- invalid calibration points rejected
+
+Important:
+Do not implement automatic line detection.
+Do not implement YOLO.
+Manual calibration is enough for Phase 2.
+PROMPT 8 — Frontend upload ve processing entegrasyonu
+Backend hazır olduktan sonra frontend’i bağla.
+
+Integrate the frontend with the real Phase 2 backend APIs.
+
+Context:
+The UI already exists from Phase 1. Do not redesign the app. Only connect the existing flows to real APIs when NEXT_PUBLIC_USE_MOCKS=false.
+
+Requirements:
+
+1. API client
+Ensure frontend API client supports:
+- auth token storage/use
+- register/login
+- match creation
+- video upload
+- upload progress if feasible
+- get video asset metadata
+- start processing
+- get processing status
+- retry processing
+- get calibration
+- save calibration
+
+2. Mock mode
+If NEXT_PUBLIC_USE_MOCKS=true:
+- existing demo behavior must continue working
+
+If NEXT_PUBLIC_USE_MOCKS=false:
+- use real backend endpoints
+
+3. Login
+Login screen should call real login endpoint in non-mock mode.
+Store token securely enough for MVP.
+Handle invalid credentials.
+
+4. New Match Upload page
+Connect:
+- create/select match
+- upload file
+- show upload progress
+- show upload success
+- show metadata if available
+- CTA to calibration or processing
+
+5. Processing Status page
+Connect to real processing status endpoint.
+Poll periodically.
+Show:
+- queued
+- current step
+- progress percent
+- waiting_calibration
+- failed
+- completed
+- retry
+
+6. Match detail / video analysis
+If real analysis is not available yet:
+- clearly show “Analiz altyapısı hazır, CV çıktıları Phase 3’te üretilecek” or appropriate MVP copy
+- do not fake real YOLO results in non-mock mode unless seeded/demo
+
+7. Error states
+Handle:
+- 401 unauthenticated
+- 403 forbidden
+- 404 match not found
+- upload failed
+- processing failed
+- calibration required
+
+8. Tests/build
+Run frontend lint/build if available.
+Fix TypeScript errors.
+
+Important:
+Do not redesign UI.
+Do not implement YOLO.
+Do not remove demo/mock mode.
+PROMPT 9 — Mock mode ve demo veri korunumu
+Bu prompt, “gerçek API’ye bağlayınca demo bozulmasın” diye önemli.
+
+Audit and preserve mock/demo mode after Phase 2 backend integration.
+
+Context:
+PitchVision Lite must support two modes:
+
+1. Demo/mock mode:
+NEXT_PUBLIC_USE_MOCKS=true
+Frontend works without full backend data and shows demo product experience.
+
+2. Real API mode:
+NEXT_PUBLIC_USE_MOCKS=false
+Frontend uses real auth, upload, processing status and backend data.
+
+Requirements:
+
+1. Audit all frontend API calls.
+Ensure each relevant page behaves correctly in both modes:
+- dashboard
+- matches
+- new match upload
+- processing status
+- calibration
+- video analysis
+- reports
+- players
+- scouting
+
+2. Avoid mixed fake/real behavior
+In real mode:
+- do not silently show mock alerts as if they came from real analysis
+- if CV outputs are not available, show a clear placeholder state
+
+3. Demo credentials
+If backend seed demo credentials exist, document them clearly.
+No implicit user fallback.
+
+4. Error/loading/empty states
+Make sure both modes have:
+- loading
+- empty
+- error
+- unauthenticated
+- forbidden
+
+5. Tests/build
+Run frontend checks if available.
+Fix regressions.
+
+Return:
+- pages audited
+- issues fixed
+- remaining limitations
+PROMPT 10 — Phase 2 genel kalite kontrol
+Bu fazın sonunda kullan.
+
+Perform a full Phase 2 quality control pass for PitchVision Lite.
+
+Branch:
+phase-2/production-core-pipeline
+
+Check the following:
+
+Architecture:
+- Monorepo still clean
+- backend/frontend separation clear
+- services modular
+- no giant files introduced
+- API client organized
+- Docker Compose still valid
+
+Auth:
+- JWT login/register works
+- missing token returns 401
+- invalid token returns 401
+- user cannot access another organization’s resources
+- roles are enforced where implemented
+- no implicit first-user fallback remains
+
+Video upload:
+- MP4/MOV upload works
+- invalid files rejected
+- oversized files rejected
+- storage abstraction works
+- local storage works
+- signed URL access requires auth/org access
+- metadata extraction works or fails gracefully
+
+Processing:
+- job created
+- duplicate active job prevented
+- status endpoint works
+- retry failed job works
+- waiting_calibration state works
+- worker can run through mock pipeline
+- progress updates are visible
+
+Frontend:
+- mock mode works
+- real API mode works
+- upload page works
+- processing page polls status
+- calibration required state works
+- errors are shown clearly
+- Turkish product language remains consistent
+- brand remains PitchVision Lite
+
+Tests:
+- backend tests pass
+- auth tests pass
+- upload tests pass
+- processing tests pass
+- frontend lint/build pass if available
+
+Docs:
+- README has Phase 2 Status
+- .env.example updated
+- worker/redis instructions included
+- limitations clearly stated:
+  - real YOLO is Phase 3
+  - real CV analysis is Phase 3
+  - automatic clip/report generation is later phase if not implemented
+
+After checking, fix issues found.
+
+Return:
+1. Summary
+2. Fixed issues
+3. Remaining known limitations
+4. Test results
+5. Recommended next branch for Phase 3
+PROMPT 11 — README, commit ve push
+En son bu prompt.
+
+Finalize Phase 2.
+
+Requirements:
+
+1. README
+Add or update:
+## Phase 2 Status — Production Core Pipeline
+
+Include:
+- what is completed
+- what works locally
+- how to run backend/frontend/worker/redis
+- how to use mock mode
+- how to use real API mode
+- demo credentials if available
+- current limitations
+- next phase: drone/high-angle CV foundation
+
+2. .env.example
+Ensure it includes:
+- DATABASE_URL
+- REDIS_URL
+- JWT_SECRET_KEY
+- JWT_EXPIRE_MINUTES
+- STORAGE_BACKEND
+- LOCAL_STORAGE_DIR
+- MAX_VIDEO_UPLOAD_MB
+- SIGNED_URL_EXPIRY_SECONDS
+- NEXT_PUBLIC_API_BASE_URL
+- NEXT_PUBLIC_USE_MOCKS
+
+3. Tests
+Run relevant tests and include results.
+
+4. Git
+Show git status.
+Commit all relevant Phase 2 changes with message:
+
+PitchVision Lite: Phase 2 production core pipeline
+
+Push branch:
+
+phase-2/production-core-pipeline
+
+Important:
+Do not include local uploaded videos, model weights, generated large files, or secrets.
+Update .gitignore if necessary.
+Phase 2 boyunca dikkat edilecek kurallar
+1. YOLO’ya girme
+Bu fazda AI “istersen YOLO da ekleyeyim” gibi davranırsa engelle.
+
+Cevap:
+
+Do not implement YOLO in Phase 2. Keep CV mocked. Phase 2 is production-core-pipeline only.
+2. Mock mode’u bozma
+Mock mode hâlâ demo ve sunum için değerli.
+
+NEXT_PUBLIC_USE_MOCKS=true must continue working.
+3. Güvenlikte taviz verme
+Özellikle şunu kontrol et:
+
+Başka organization verisi görülebiliyor mu?
+Bu proje çocuk/genç oyuncu verisi tutacağı için veri izolasyonu en baştan sağlam olmalı.
+
+4. Büyük dosya ve model dosyalarını commit’leme
+Şunları .gitignore içine al:
+
+uploads/
+storage/
+data/sample_videos/
+outputs/
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.pt
+*.onnx
+*.engine
+5. Her prompt sonrası test al
+Her modül bittikten sonra:
+
+Run related tests and fix regressions before moving to the next step.
+Phase 2 sonrası Phase 3 adı
+Phase 2 bitince sonraki branch şu olmalı:
+
+phase-3/drone-cv-foundation
+Phase 3 hedefi:
+
+Drone/yüksek açı videodan saha koordinatlı oyuncu detection/tracking üretmek.
+
+Ama ona sonra geçeceğiz.
+
+Phase 3 promptları ayrı olacak. Orada:
+
+frame extraction,
+
+calibration,
+
+YOLO local setup,
+
+detector interface,
+
+ByteTrack/SimpleTracker,
+
+TrackPoint,
+
+debug overlay,
+
+team shape metrics
+
+gireceğiz.
+
+Faz 2 için kısa çalışma planı
+Gün 1-2
+Branch oluştur.
+
+Repo analizi.
+
+Phase 2 planı.
+
+Auth implementasyonu.
+
+Gün 3-4
+Organization isolation.
+
+Auth testleri.
+
+Role checks.
+
+Demo fallback temizliği.
+
+Gün 5-6
+Video upload.
+
+Local storage.
+
+MIME/size validation.
+
+Signed URL.
+
+Gün 7
+Metadata extraction.
+
+Upload frontend bağlantısı.
+
+Gün 8-9
+Redis/RQ veya Celery.
+
+Processing job model.
+
+State machine.
+
+Worker.
+
+Gün 10
+Processing frontend entegrasyonu.
+
+Waiting calibration state.
+
+Gün 11-12
+Testler.
+
+Docker Compose.
+
+README.
+
+Phase 2 status.
+
+Commit/push.
+
+Bu full AI + senin aktif testinle 1.5–2 hafta civarı sürebilir. Eğer Windows/Python/Docker sorunları çıkarsa 3 haftaya sarkabilir.
+
+Faz 2 sonunda beklenen ürün durumu
+Phase 2 sonunda PitchVision Lite hâlâ tam analiz ürünü olmayacak ama artık şu hale gelecek:
+
+Gerçek kullanıcı sistemi var.
+Gerçek video yükleme var.
+Gerçek storage var.
+Gerçek async job sistemi var.
+Gerçek processing status var.
+Kalibrasyon gerekliliği akışa bağlı.
+Frontend mock ve real API modlarında çalışıyor.
+CV/YOLO için hazır altyapı var.
+Bu çok önemli bir eşik.
+
+Çünkü Phase 3’te YOLO eklerken artık şunu düşünmeyeceğiz:
+
+upload nasıl olacak?
+
+video nerede duracak?
+
+job nasıl çalışacak?
+
+kullanıcı başka kulübün videosunu görür mü?
+
+status ekranı ne gösterecek?
+
+Bunlar Phase 2’de çözülecek.
+
+İlk kullanacağın prompt
+Şimdi hemen başlamak için ilk prompt bu:
+
+Current repository: https://github.com/umutcangultenn/pitchvision
+
+Current branch:
+milestone/phase-1-pitchvision-lite-mvp
+
+Create a new branch from the current branch:
+
+phase-2/production-core-pipeline
+
+Before implementing anything, inspect the existing monorepo in detail.
+
+I want Phase 2 to focus on production-core-pipeline, not YOLO yet.
+
+Context:
+PitchVision Lite is a football match/training analysis SaaS for amateur clubs, football schools and U8-U17 academies. The long-term vision is drone/high-angle video analysis, homography, player tracking, tactical metrics, clips, reports and player passports. But Phase 2 must only build the production-ready core infrastructure required before real CV/YOLO work.
+
+Please inspect:
+- monorepo structure
+- backend FastAPI app
+- existing models
+- existing routes
+- auth/current user behavior
+- organization/team/match/player relationships
+- frontend routes
+- frontend API client
+- mock mode / NEXT_PUBLIC_USE_MOCKS
+- upload/video handling
+- processing status implementation
+- tests
+- Docker Compose
+- README
+
+Return a detailed report:
+
+1. Current architecture summary
+2. What is production-ready
+3. What is demo/mock/stub
+4. What must be changed for Phase 2
+5. Risks
+6. Proposed implementation order
+7. Files likely to change
+
+Important:
+Do not implement code yet.
+Do not add YOLO yet.
+Do not change UI design in this step.
+Bunu Cursor’a ver. Çıktısını aldıktan sonra Prompt 1 ile devam et. Sonra auth’a geçeceğiz.
+
+Başlıyoruz. Allah utandırmasın.
+
+

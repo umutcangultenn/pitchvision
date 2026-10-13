@@ -1,0 +1,443 @@
+Evet, mevcut kapsamın dışına eklenebilecek çok iyi özellikler var. Ama hepsini birden eklemek yerine PitchVision Lite’ı amatör/gençlik futboluna özel yapan özelliklere odaklanmak daha mantıklı.
+
+Profesyonel araçlarda video tagging, oyuncu raporları, paylaşılabilir analizler, scouting havuzu, gelişmiş event data ve API gibi güçlü yönler öne çıkıyor; Hudl Sportscode video analizi, canlı capture, player report ve paylaşılabilir analiz akışlarını vurguluyor; Wyscout tarafında video + scouting + oyuncu hedefleme güçlü; StatsBomb ise zengin event data, 360/contextual data ve API/research tarafıyla ayrışıyor. Senin farkın bunları amatör kulüp/antrenör/veli/oyuncu gelişimi seviyesine indirmek olmalı.
+
+En mantıklı yeni özellikler
+1. Antrenör Not Defteri + Zaman Kodlu Notlar
+
+Video izlerken antrenör şu şekilde not ekleyebilmeli:
+
+“12:43 — Savunma hattı geride kaldı.”
+“18:10 — Kerem derin koşuyu doğru zamanda yaptı.”
+“34:22 — Top kaybı sonrası reaksiyon zayıf.”
+
+Bu notlar maç raporuna, oyuncu pasaportuna ve antrenman önerilerine bağlanabilir.
+
+Bence MVP sonrası en değerli özelliklerden biri bu. Çünkü otomatik analiz %100 doğru olmasa bile antrenör kendi gözlemini sisteme işleyebilir.
+
+2. Alert Onay Sistemi
+
+Sistem “taktiksel uyarı adayı” çıkarıyor ya, antrenör bunu yönetebilmeli:
+
+Onaylandı
+Reddedildi
+İncelenecek
+Oyuncu pasaportuna işle
+Rapor dışı bırak
+Antrenman önerisine dönüştür
+
+Bu özellik ürünü “AI karar verdi” havasından çıkarır, antrenör kontrollü analiz asistanı yapar.
+
+3. Antrenman Planlayıcı
+
+Şu an antrenman önerileri var; bunu bir adım ileri taşıyıp gerçek planlayıcı yapabilirsin.
+
+Örnek akış:
+
+Maç raporunda “bloklar arası kopukluk” çıktı.
+Sistem “8v8 kompakt blok oyunu” önerdi.
+Antrenör bunu Çarşamba antrenmanına ekledi.
+Antrenman sonrası “uygulandı / kısmen uygulandı / tekrar edilmeli” işaretledi.
+
+Bu, projeyi sadece analiz ürünü olmaktan çıkarıp antrenman döngüsü ürünü yapar.
+
+4. Maçtan Antrenmana Gelişim Döngüsü
+
+Bence projenin en güçlü farklılaştırıcısı bu olabilir:
+
+Maç analizi → problem → antrenman önerisi → uygulama → sonraki maçta ölçüm
+
+Örneğin:
+
+Hafta 1: DM gap ortalama 21.4 m
+Antrenman: 8v8 kompakt blok
+Hafta 2: DM gap 18.1 m
+Hafta 3: DM gap 15.6 m
+
+Bu şekilde sistem sadece “geçmişi analiz eden” değil, gelişimi takip eden bir ürün olur.
+
+5. Veli / Oyuncu Paylaşım Modu
+
+U8-U17 için çok değerli olur ama dikkatli tasarlanmalı.
+
+Antrenör, oyuncuya veya veliye sade bir gelişim raporu paylaşabilmeli:
+
+Son 4 haftalık gelişim
+Güçlü yönler
+Gelişim alanları
+2-3 pozitif klip
+Antrenman devamlılığı
+“Bu veri tek başına oyuncu değerlendirmesi değildir” uyarısı
+
+Bu rapor asla “oyuncu kötü” dili kullanmamalı. Tamamen gelişim odaklı olmalı.
+
+6. Oyuncu Hedef Kartları
+
+Her oyuncuya sezonluk hedef tanımlanabilir:
+
+Arda Yılmaz — CM
+Hedefler:
+
+Destek açısı alma sıklığını artır
+Top kaybı sonrası 5 saniye reaksiyonu geliştir
+Haftada 2 pozitif üçüncü adam koşusu klibi üret
+
+Her maçtan sonra hedefe yakınlık güncellenir.
+
+Bu özellik oyuncu pasaportunu çok daha anlamlı yapar.
+
+7. Pozisyona Özel Gelişim Şablonları
+
+Her pozisyon için ayrı değerlendirme seti oluşturabilirsin.
+
+Stoper:
+
+Hat uyumu
+Savunma arkası kontrol
+Geri koşu
+Baskı altında pas açısı
+
+Merkez orta saha:
+
+Destek açısı
+Top alma pozisyonu
+Geçiş savunması
+Pas bağlantısı
+
+Kanat:
+
+Genişlik koruma
+Derin koşu
+1v1 aksiyon
+Geri dönüş savunması
+
+Forvet:
+
+Pres tetikleme
+Derinlik koşusu
+Ceza sahası pozisyonu
+Duvar olma
+
+Bu, scouting tarafını da çok güçlendirir.
+
+8. Manuel Event Tagging
+
+Otomatik event detection zaman alacak. O yüzden manuel tagging özelliği çok işe yarar.
+
+Antrenör/analist videoda şu etiketleri elle ekleyebilir:
+
+Şut
+Pas
+Top kaybı
+Top kazanımı
+Geçiş hücumu
+Pres
+Savunma hatası adayı
+Pozitif aksiyon
+Duran top
+Topsuz koşu
+
+Hudl/Sportscode gibi araçların en önemli gücü zaten video coding/tagging iş akışlarıdır. Sen bunun daha basit, amatör dostu versiyonunu yapabilirsin.
+
+9. Klip Playlist’leri
+
+Klipleri tek tek göstermek yerine playlist oluşturulabilmeli:
+
+Savunma hattı playlist’i
+Top kaybı sonrası reaksiyonlar
+Arda’nın pozitif aksiyonları
+U15 takımının geçiş hücumları
+Haftanın gelişim klipleri
+Rakibe hazırlık klipleri
+
+Wyscout/Hudl tarafındaki video workflow mantığını amatör seviyeye indirmenin en temiz yollarından biri bu olur.
+
+10. Rakip Analizi Modülü
+
+Şu an proje daha çok kendi takımına odaklı. Rakip analizi eklenebilir:
+
+Rakibin ortalama takım boyu
+Savunma hattı davranışı
+Geçişte güçlü/zayıf yönleri
+Duran top klipleri
+En tehlikeli oyuncular
+Rakip oyun modeli notları
+
+Amatör seviyede bu modül çok basit olsa bile değerli olur:
+
+“Rakip sol kanattan hızlı çıkıyor.”
+“Savunma hattı geride kalıyor.”
+“Duran toplarda arka direk boş kalıyor.”
+
+11. Duran Top Analizi
+
+Bu çok değerli ve daha sınırlı bir problem olduğu için CV/AI açısından da daha uygulanabilir.
+
+Modüller:
+
+Korner klipleri
+Serbest vuruş klipleri
+Taç organizasyonları
+Penaltı / ceza sahası duran top
+Adam paylaşımı notları
+Ön direk / arka direk koşuları
+Duran top gol/fırsat arşivi
+
+Amatör futbolda duran toplar maç sonucunu çok etkiler. Bu yüzden ürün değerini hızlı gösterir.
+
+12. Basit xG Değil, “Şut Kalitesi” Lite
+
+Tam profesyonel xG modeli yerine amatör seviyeye uygun “Şut Kalitesi” metriği yapılabilir.
+
+Bileşenler:
+
+Kaleye uzaklık
+Açı
+Şut öncesi baskı
+Ceza sahası içi/dışı
+Şut tipi
+Kaleci pozisyonu placeholder
+Savunmacı yakınlığı
+
+Çıktı:
+
+“Yüksek kaliteli şut adayı”
+“Düşük açılı şut”
+“Daha iyi pas opsiyonu vardı”
+
+Bu hem oyuncu gelişimi hem de antrenman için faydalı olur.
+
+13. Pas Koridoru / Destek Açısı Analizi
+
+Bu proje için çok “antrenörlük” kokan bir özellik olur.
+
+Top taşıyan oyuncu için sistem şunları gösterebilir:
+
+Yakındaki 3 pas opsiyonu
+Açık pas koridoru
+Kapalı pas koridoru
+Destek açısı eksikliği
+Üçüncü adam koşusu fırsatı
+
+Bu özellik özellikle merkez orta saha ve bek/kanat oyuncuları için çok değerli.
+
+14. Takım Oyun Modeli Ayarları
+
+Her takım aynı oynamaz. Bu yüzden sistemde “oyun modeli profili” olmalı.
+
+Örneğin:
+
+Savunma:
+
+Alçak blok
+Orta blok
+Yüksek pres
+
+Bek davranışı:
+
+Çizgiyi korur
+İç koridora girer
+Agresif çıkar
+
+Stoper davranışı:
+
+Alan savunur
+Adam takip eder
+
+Geçiş:
+
+İlk 5 saniye hızlı çık
+Önce güvenli pas
+Kanatlara yönel
+
+Böylece sistemin “hata” dediği şey antrenör prensibine göre şekillenir.
+
+15. Yaş Kategorisine Göre Eşikler
+
+U11 ile U17 aynı metriklerle değerlendirilmemeli.
+
+Örneğin:
+
+U11’de takım boyu sapması daha toleranslı olmalı
+U17’de bloklar arası mesafe daha sıkı değerlendirilmeli
+U8-U10 için daha az skor, daha fazla gelişim dili kullanılmalı
+U15+ için taktiksel metrikler artırılmalı
+
+Bu özellik ürünü gençlik futboluna gerçekten uygun hale getirir.
+
+16. Antrenör Gözlem Formları
+
+Her maçtan sonra antrenör oyunculara kısa değerlendirme girebilir:
+
+Bugün en güçlü yönü
+Gelişim alanı
+Mental durum
+Antrenman devamlılığı
+Maç içi karar kalitesi
+Not
+
+Bu veriler oyuncu pasaportuna bağlanır.
+
+Çünkü genç oyuncu gelişiminde sadece video verisi yetmez; antrenör gözlemi çok önemli.
+
+17. Oyuncu Gelişim Hikayesi
+
+Her oyuncu için timeline oluşturulabilir:
+
+İlk maç analizi
+İlk scout notu
+İlk pozitif klip
+Gelişim hedefi
+Hedef tamamlandı
+Pozisyon değişimi
+Turnuva performansı
+Sezon sonu değerlendirme
+
+Bu hem veli/oyuncu iletişimi hem portfolyo için çok güçlü olur.
+
+18. Takım İçi Karşılaştırma Ama Etik Mod
+
+Oyuncuları karşılaştırmak faydalı ama genç yaşta zararlı da olabilir. Bu yüzden iki mod olabilir:
+
+Antrenör modu:
+
+Detaylı karşılaştırma
+Skorlar
+Sıralamalar
+Pozisyon bazlı filtreler
+
+Oyuncu/veli modu:
+
+Sıralama yok
+Gelişim trendi var
+Pozitif klipler var
+Gelişim hedefleri var
+
+Bu KVKK/etik açıdan da daha doğru.
+
+19. Video Üzerine Çizim / Telestration
+
+Antrenör videoda çizim yapabilmeli:
+
+Ok çiz
+Daire içine al
+Savunma çizgisi çiz
+Pas koridoru çiz
+Boş alanı işaretle
+Metin notu ekle
+
+Hudl tarafında telestration/graphics gibi özellikler profesyonel video analiz akışının önemli parçası olarak sunuluyor. Sen bunun basit versiyonunu eklersen video analiz ekranı çok daha güçlü görünür.
+
+20. Paylaşılabilir Klip Linkleri
+
+Antrenör klibi oyuncuya, veliye veya teknik ekibe gönderebilmeli.
+
+Özellikler:
+
+Süreli link
+Şifreli link
+Sadece belirli kişi görebilsin
+İndirme açık/kapalı
+Oyuncu adı anonimleştirilebilir
+Filigran: PitchVision Lite
+
+Bu, ürünün günlük kullanımını artırır.
+
+Daha ileri seviye ama güçlü özellikler
+21. Canlı Maç / Devre Arası Analizi
+
+İleride çok etkileyici olur:
+
+İlk yarı videosu yüklenir
+Sistem hızlıca 5-10 uyarı çıkarır
+Devre arasında antrenöre kısa rapor verir
+
+Ama MVP için erken. Önce post-match analiz oturmalı.
+
+22. Offline Analiz Modu
+
+Amatör sahalarda internet zayıf olabilir.
+
+Kullanıcı video yükleyemese bile:
+
+Maçı lokal etiketler
+Not alır
+Sonra internet gelince senkronize eder
+
+Bu ileri seviye ama saha gerçeklerine uygun.
+
+23. Akademi Yönetim Paneli
+
+Futbol okulları için:
+
+Yaş grubu bazlı gelişim
+Antrenman katılımı
+Oyuncu sayısı
+Veli raporları
+Sezonluk gelişim özeti
+Hangi yaş grubunda hangi taktik problem sık görülüyor?
+
+Bu özellik ürünü sadece analiz değil, akademi gelişim yönetimi platformuna çevirir.
+
+24. Scout Kısa Liste ve Rapor Paketleri
+
+Scouting tarafına eklenebilir:
+
+Oyuncuyu kısa listeye ekle
+Oyuncu karşılaştır
+Scout raporu oluştur
+PDF export
+Klip paketi oluştur
+“İzlenmeli / tekrar izlenmeli / potansiyel” etiketleri
+
+Wyscout gibi platformların scouting ve video/data birleşimi burada iyi referans olabilir, ama sen bunu yerel amatör/gençlik seviyesine uyarlamalısın.
+
+25. Açık Veri / Araştırma Modu
+
+Senin kariyer hedefin için çok değerli olur.
+
+Anonimleştirilmiş verilerle:
+
+Teknik blog yazıları
+Case study
+Akademi gelişim raporları
+Whitepaper
+“U15 seviyesinde bloklar arası mesafe analizi”
+“Genç oyuncularda derin koşu gelişimi”
+
+StatsBomb’un açık veri yaklaşımı futbol analitiği topluluğunda araştırma ve öğrenmeyi desteklemek için önemli bir örnek; sen de kendi anonim/etik mini veri setlerinle portfolyo üretebilirsin.
+
+Ben olsam ekleme sırasını böyle yapardım
+Hemen eklenebilir, MVP’ye çok değer katar
+Zaman kodlu antrenör notları
+Alert onay sistemi
+Manuel event tagging
+Klip playlist’leri
+Maç raporu → antrenman planı bağlantısı
+Oyuncu hedef kartları
+Paylaşılabilir klip linkleri
+2. aşama
+Duran top analizi
+Rakip analizi
+Pozisyona özel gelişim şablonları
+Antrenör gözlem formları
+Veli/oyuncu paylaşım modu
+Takım oyun modeli ayarları
+3. aşama
+Telestration / video üzerine çizim
+Akademi yönetim paneli
+Scout kısa liste sistemi
+Canlı/devre arası analiz
+Offline analiz modu
+Araştırma/portfolyo veri export modu
+En güçlü 5 özellik önerim
+
+Bence mevcut kapsamın üzerine en stratejik 5 özellik şunlar:
+
+Manuel event tagging + zaman kodlu notlar
+Alert onay/red sistemi
+Klip playlist ve paylaşım linkleri
+Maç analizi → antrenman planı → sonraki maç ölçümü döngüsü
+Oyuncu hedef kartları + gelişim odaklı veli/oyuncu raporu
+
+Bunlar projeyi sadece “AI video analiz denemesi” olmaktan çıkarır; gerçekten antrenörün her hafta kullanacağı bir gelişim platformuna dönüştürür.

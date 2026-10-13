@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import type { Player, PlayerMatchPerformance } from "@/types/domain";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type PlayersTabProps = {
   players: Player[];
@@ -59,7 +60,14 @@ export function PlayersTab({ players, performances, onOpenPlayerProfile }: Playe
       </div>
 
       <div className="space-y-2 max-h-96 overflow-y-auto">
-        {sortedPlayers.map(player => {
+        {sortedPlayers.length === 0 ? (
+          <EmptyState
+            title="Henüz oyuncu yok"
+            description="Bu maç için oyuncu verisi bulunamadı."
+            icon="👥"
+          />
+        ) : (
+          sortedPlayers.map(player => {
           const performance = getPerformance(player.id);
           
           return (
@@ -130,7 +138,8 @@ export function PlayersTab({ players, performances, onOpenPlayerProfile }: Playe
               )}
             </div>
           );
-        })}
+        })
+        )}
       </div>
     </div>
   );

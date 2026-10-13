@@ -17,7 +17,7 @@ const PIPELINE: { key: string; icon: string; label: string; description: string 
   { key: "metadata",    icon: "🔍", label: "Metadata çıkarıldı",    description: "Çözünürlük, FPS, süre ve codec bilgileri okundu." },
   { key: "frames",      icon: "🎞️", label: "Frame extraction",      description: "Video kareler halinde ayrıştırıldı ve önbelleğe alındı." },
   { key: "calibration", icon: "📐", label: "Saha kalibrasyonu",     description: "Homografi matrisi hesaplandı, perspektif düzeltildi." },
-  { key: "detection",   icon: "👁️", label: "Oyuncu tespiti",        description: "YOLOv8 ile oyuncu, top ve hakem sınıflandırması yapıldı." },
+  { key: "detection",   icon: "👁️", label: "Oyuncu tespiti",        description: "Demo: gerçek YOLO yok; MVP’de örnek tespit adımı (YOLOv8 hedef mimari)." },
   { key: "tracking",    icon: "🎯", label: "Tracking",              description: "ByteTrack ile her nesneye benzersiz ID atandı." },
   { key: "metrics",     icon: "📊", label: "Metrik hesaplama",      description: "Kompaktlık, field tilt, PPDA ve hız metrikleri üretildi." },
   { key: "alerts",      icon: "⚡", label: "Taktiksel uyarılar",    description: "Kural motoru ile kritik taktiksel anlar tespit edildi." },

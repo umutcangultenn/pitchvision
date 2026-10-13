@@ -27,6 +27,7 @@ app.add_middleware(
 
 @app.on_event("startup")
 def on_startup() -> None:
+    settings.validate_secret_key()
     # MVP kolaylığı: tablo yoksa oluştur, demo veriyi idempotent şekilde yükle.
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:

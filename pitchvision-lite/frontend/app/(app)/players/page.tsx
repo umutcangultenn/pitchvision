@@ -2,27 +2,51 @@
 
 import React, { useMemo, useState } from "react";
 
-import { mockPlayers } from "@/data/demo";
 import { useAppStore } from "@/lib/appStore";
+import { usePlayers } from "@/hooks/usePlayers";
 import type { Player } from "@/types/domain";
 
 import { FilterBar } from "@/components/ui/FilterBar";
 import { PlayerCard } from "@/components/cards/PlayerCard";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 
 export default function PlayersPage() {
   const { teamId } = useAppStore();
+  const { data: allPlayers, loading, error, refetch } = usePlayers();
   const [q, setQ] = useState("");
 
   const players = useMemo(() => {
-    return mockPlayers
+    return (allPlayers ?? [])
       .filter((p) => p.teamId === teamId)
       .filter((p) => {
         if (!q) return true;
         const hay = `${p.firstName} ${p.lastName} ${p.position}`.toLowerCase();
         return hay.includes(q.toLowerCase());
       });
-  }, [q, teamId]);
+  }, [q, teamId, allPlayers]);
+
+  if (loading) {
+    return (
+      <div className="space-y-4 animate-pulse">
+        <div className="h-10 rounded-xl bg-white/5 w-64" />
+        <div className="grid gap-4 md:grid-cols-2">
+          {[...Array(4)].map((_, i) => <div key={i} className="h-32 rounded-2xl bg-white/5" />)}
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !allPlayers) {
+    return (
+      <ErrorState
+        title="Oyuncular yüklenemedi"
+        description={error.message}
+        icon="📡"
+        action={<button onClick={refetch} className="px-4 py-2 text-sm font-semibold rounded-xl bg-emerald-600 text-white hover:bg-emerald-500 transition-all">Yeniden Dene</button>}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

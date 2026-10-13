@@ -19,6 +19,7 @@ from app.models.match import Match
 from app.models.organization import Organization
 from app.models.performance import PlayerMatchPerformance, ScoutNote
 from app.models.player import Player
+from app.models.privacy import AuditLog, ParentalConsent  # noqa: F401
 from app.models.report import Report
 from app.models.tactical import Clip, TacticalAlert, TacticalMetric
 from app.models.team import Team

@@ -9,6 +9,7 @@ import {
 } from "@/data/demo";
 import { RadarChartCard } from "@/components/charts/RadarChartCard";
 import { TrendChartCard } from "@/components/charts/TrendChartCard";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import type { Player } from "@/types/domain";
 
@@ -245,8 +246,11 @@ export default function PlayerPassportPage() {
           {/* Actions */}
           <div className="flex flex-col gap-2">
             <button onClick={() => window.print()} className="px-4 py-2 rounded-lg text-sm font-medium bg-warning/20 border border-warning/40 text-warning hover:bg-warning/30 transition-all">
-              📥 PDF Export
+              📥 PDF İndir
             </button>
+            <Link href="/scouting" className="px-4 py-2 rounded-lg text-sm font-medium bg-white/10 border border-white/20 text-text hover:bg-white/15 transition-all text-center">
+              Scouting panosu
+            </Link>
             <button onClick={() => { setTab("scouting"); setAddingNote(true); }} className="px-4 py-2 rounded-lg text-sm font-medium bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 transition-all">
               📝 Scout Notu Ekle
             </button>
@@ -362,7 +366,18 @@ function OverviewTab({ player, radarData, avgMaxSpeed, avgSpeed, totalPositive, 
 
 function PerformancesTab({ performances }: { performances: typeof mockPerformances }) {
   if (!performances.length) {
-    return <div className="text-sm text-text-muted">Performans kaydı bulunamadı.</div>;
+    return (
+      <EmptyState
+        title="Yeterli maç verisi yok"
+        description="Bu oyuncu için gelişim trendi oluşturabilmek için en az 3 maç verisi gereklidir."
+        icon="📈"
+        action={
+          <a href="/matches/new" className="px-4 py-2 text-sm font-semibold rounded-xl bg-emerald-600 text-white hover:bg-emerald-500 transition-all">
+            Maç Verisi Ekle
+          </a>
+        }
+      />
+    );
   }
   return (
     <div className="space-y-4">
@@ -550,7 +565,19 @@ function ScoutingTab({ notes, adding, noteText, noteRating, onNoteChange, onRati
       )}
 
       {notes.length === 0 && !adding && (
-        <div className="text-sm text-text-muted">Henüz scouting notu yok.</div>
+        <EmptyState
+          title="Henüz scout notu yok"
+          description="Bu oyuncu için yapılmış bir gözlem bulunmuyor. İlk notunu ekle."
+          icon="📝"
+          action={
+            <button
+              onClick={onToggleAdd}
+              className="px-4 py-2 text-sm font-semibold rounded-xl bg-emerald-600 text-white hover:bg-emerald-500 transition-all"
+            >
+              Not Ekle
+            </button>
+          }
+        />
       )}
 
       {notes.map((n: any) => (
@@ -575,7 +602,18 @@ function ScoutingTab({ notes, adding, noteText, noteRating, onNoteChange, onRati
 
 function ClipsTab({ clips }: { clips: any[] }) {
   if (!clips.length) {
-    return <div className="text-sm text-text-muted">Bu oyuncuya ait klip bulunamadı.</div>;
+    return (
+      <EmptyState
+        title="Klip yok"
+        description="Bu oyuncuya ait etiketlenmiş video klibi mevcut değil."
+        icon="🎬"
+        action={
+          <a href="/matches" className="px-4 py-2 text-sm font-semibold rounded-xl bg-emerald-600 text-white hover:bg-emerald-500 transition-all">
+            Maçlara Git
+          </a>
+        }
+      />
+    );
   }
   return (
     <div className="space-y-3">

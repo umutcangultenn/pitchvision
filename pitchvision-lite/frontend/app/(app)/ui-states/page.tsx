@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -13,198 +14,257 @@ import { ProcessingStep, type ProcessingStepItem } from "@/components/ui/Process
 import { FilterBar } from "@/components/ui/FilterBar";
 import { UploadDropzone } from "@/components/ui/UploadDropzone";
 
+// ── Reusable action button ────────────────────────────────────────────────────
+function Btn({
+  label,
+  primary = true,
+  href,
+  onClick,
+}: {
+  label: string;
+  primary?: boolean;
+  href?: string;
+  onClick?: () => void;
+}) {
+  const cls = primary
+    ? "px-4 py-2 text-sm font-semibold rounded-xl bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-900/20 transition-all"
+    : "px-4 py-2 text-sm font-semibold rounded-xl bg-white/5 border border-white/10 text-text-soft hover:text-white hover:border-white/20 transition-all";
+
+  if (href) return <Link href={href} className={cls}>{label}</Link>;
+  return <button onClick={onClick} className={cls}>{label}</button>;
+}
+
+// ── Section wrapper ───────────────────────────────────────────────────────────
+function Section({ num, title, children }: { num: string; title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-4">
+      <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+        <span className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-sm font-mono">
+          {num}
+        </span>
+        {title}
+      </h2>
+      <div className="grid gap-6 md:grid-cols-2">{children}</div>
+    </section>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default function UiStatesPage() {
-  const [open, setOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
-  const pushToast = (t: Omit<ToastItem, "id">) => {
+  const push = (t: Omit<ToastItem, "id">) =>
     setToasts((prev) => [...prev, { ...t, id: String(Date.now()) }]);
-  };
-
-  const ActionBtn = ({ label, primary = true, onClick }: { label: string; primary?: boolean; onClick?: () => void }) => (
-    <button
-      onClick={onClick}
-      className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all ${
-        primary
-          ? "bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-900/20"
-          : "bg-white/5 border border-white/10 text-text-soft hover:text-white hover:border-white/20"
-      }`}
-    >
-      {label}
-    </button>
-  );
 
   return (
-    <div className="space-y-12 pb-20">
+    <div className="space-y-14 pb-20">
+      {/* Header */}
       <div>
-        <div className="text-sm font-medium text-emerald-400">UI States & Feedback System</div>
-        <h1 className="mt-1 text-3xl font-bold text-white">Bileşen Durumları ve Bildirimler</h1>
-        <p className="mt-2 text-sm text-text-muted">PitchVision Lite genelinde kullanılan boş durum (empty), hata (error) ve geri bildirim bileşenleri.</p>
+        <div className="text-sm font-medium text-emerald-400">UI States Showcase</div>
+        <h1 className="mt-1 text-3xl font-bold text-white">Boş & Hata Durumları</h1>
+        <p className="mt-2 text-sm text-text-muted">
+          PitchVision Lite genelinde kullanılan tüm empty state ve error state bileşenleri.
+        </p>
       </div>
 
-      {/* 1. Maçlar & Upload */}
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-          <span className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-sm">01</span>
-          Maçlar & Yükleme
-        </h2>
-        <div className="grid gap-6 md:grid-cols-2">
-          <EmptyState
-            title="Henüz maç yok"
-            description="Analiz etmek istediğiniz maç videolarını yükleyerek başlayabilirsiniz."
-            icon="⚽"
-            action={<ActionBtn label="Yeni Maç Yükle" />}
-          />
-          <EmptyState
-            title="Filtreye uygun maç bulunamadı"
-            description="Seçili tarih aralığında veya kriterlerde maç kaydı yok. Lütfen filtreleri kontrol edin."
-            icon="🔍"
-            action={<ActionBtn label="Filtreleri Temizle" primary={false} />}
-          />
-          <EmptyState
-            title="Yükleme bekleniyor"
-            description="Analiz sürecini başlatmak için bir video dosyası seçin veya sürükleyip bırakın."
-            icon="📤"
-            action={<ActionBtn label="Dosya Seç" />}
-          />
-          <ErrorState
-            title="Yükleme başarısız"
-            description="İnternet bağlantınızı kontrol edin veya dosyayı tekrar yüklemeyi deneyin."
-            icon="📡"
-            action={<ActionBtn label="Yeniden Dene" />}
-          />
-          <ErrorState
-            title="Dosya formatı desteklenmiyor"
-            description="Lütfen .mp4, .mov veya .avi formatında bir video dosyası yükleyin."
-            icon="📁"
-            action={<ActionBtn label="Dosyayı Değiştir" />}
-          />
-          <ErrorState
-            title="Dosya çok büyük"
-            description="Ücretsiz planda maksimum dosya boyutu 2GB'dır. Lütfen videoyu sıkıştırın veya planınızı yükseltin."
-            icon="⚖️"
-            action={<ActionBtn label="Planı Yükselt" />}
-            secondaryAction={<ActionBtn label="Anladım" primary={false} />}
-          />
-        </div>
-      </section>
+      {/* ── 01 Maçlar ── */}
+      <Section num="01" title="Maçlar">
+        <EmptyState
+          title="Henüz maç yok"
+          description="Analiz etmek istediğin maç videolarını yükleyerek başlayabilirsin."
+          icon="⚽"
+          action={<Btn label="Yeni Maç Yükle" href="/matches/new" />}
+        />
+        <EmptyState
+          title="Filtreye uygun maç yok"
+          description="Seçili tarih aralığında veya kriterlerde maç kaydı bulunamadı. Filtreleri kontrol et."
+          icon="�"
+          action={<Btn label="Filtreleri Temizle" primary={false} />}
+        />
+      </Section>
 
-      {/* 2. Analiz & Kalibrasyon */}
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-          <span className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-sm">02</span>
-          Analiz & Kalibrasyon
-        </h2>
-        <div className="grid gap-6 md:grid-cols-2">
-          <EmptyState
-            title="Analiz devam ediyor"
-            description="Video işleme ve metrik hesaplama süreci devam ediyor. Tamamlandığında bildirim alacaksınız."
-            icon="⚙️"
-            action={<ActionBtn label="Durumu Görüntüle" primary={false} />}
-          />
-          <ErrorState
-            title="Analiz başarısız oldu"
-            description="Sunucu kaynaklı bir hata oluştu. Analiz sürecini tekrar başlatmayı deneyebilirsiniz."
-            icon="❌"
-            action={<ActionBtn label="Süreci Yeniden Başlat" />}
-          />
-          <EmptyState
-            title="Kalibrasyon yapılmadı"
-            description="Maç videosundan saha koordinatları çıkarılabilmesi için önce saha noktalarını işaretlemen gerekiyor."
-            icon="📐"
-            action={<ActionBtn label="Saha Kalibrasyonuna Git" />}
-          />
-          <ErrorState
-            title="Kalibrasyon noktaları yetersiz"
-            description="Saha sınırlarını belirlemek için en az 4 geçerli köşe noktası işaretlenmelidir."
-            icon="📍"
-            action={<ActionBtn label="Noktaları Düzenle" />}
-          />
-          <ErrorState
-            title="Homografi kalitesi düşük"
-            description="İşaretlenen noktalar arasında perspektif uyumsuzluğu var. Lütfen noktaların doğruluğunu kontrol edin."
-            icon="📉"
-            action={<ActionBtn label="Kalibrasyonu Kontrol Et" />}
-          />
-          <ErrorState
-            title="Saha çizgileri görünmüyor"
-            description="Görüntü kalitesi veya ışık nedeniyle saha çizgileri tespit edilemiyor. Manuel kalibrasyon gerekebilir."
-            icon="🚫"
-            action={<ActionBtn label="Manuel Modu Aç" />}
-          />
-        </div>
-      </section>
+      {/* ── 02 Upload ── */}
+      <Section num="02" title="Upload">
+        <EmptyState
+          title="Upload bekleniyor"
+          description="Analiz sürecini başlatmak için bir video dosyası seç veya sürükleyip bırak."
+          icon="📤"
+          action={<Btn label="Dosya Seç" />}
+        />
+        <ErrorState
+          title="Upload başarısız"
+          description="İnternet bağlantını kontrol et veya dosyayı tekrar yüklemeyi dene."
+          icon="📡"
+          action={<Btn label="Yeniden Dene" />}
+        />
+        <ErrorState
+          title="Dosya formatı desteklenmiyor"
+          description="Lütfen .mp4, .mov veya .avi formatında bir video dosyası yükle."
+          icon="📁"
+          action={<Btn label="Dosyayı Değiştir" />}
+        />
+        <ErrorState
+          title="Dosya çok büyük"
+          description="Ücretsiz planda maksimum dosya boyutu 2 GB'dır. Videoyu sıkıştır veya planını yükselt."
+          icon="⚖️"
+          action={<Btn label="Planı Yükselt" />}
+          secondaryAction={<Btn label="Anladım" primary={false} />}
+        />
+      </Section>
 
-      {/* 3. Oyuncular & Scouting */}
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-          <span className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-sm">03</span>
-          Oyuncular & Scouting
-        </h2>
-        <div className="grid gap-6 md:grid-cols-2">
-          <EmptyState
-            title="Henüz oyuncu yok"
-            description="Takımınıza oyuncu ekleyerek gelişim takiplerini ve analizleri başlatabilirsiniz."
-            icon="👤"
-            action={<ActionBtn label="Oyuncu Ekle" />}
-          />
-          <EmptyState
-            title="Filtreye uygun oyuncu yok"
-            description="Seçili kriterlere uygun oyuncu bulunamadı. Filtreleri genişletmeyi deneyin."
-            icon="👥"
-            action={<ActionBtn label="Filtreleri Sıfırla" primary={false} />}
-          />
-          <EmptyState
-            title="Yeterli maç verisi yok"
-            description="Bu oyuncu için gelişim trendi oluşturabilmek için en az 3 maç verisi gereklidir."
-            icon="📈"
-            action={<ActionBtn label="Maç Verisi Ekle" />}
-          />
-          <EmptyState
-            title="Henüz scout notu yok"
-            description="Bu oyuncu için yapılmış bir gözlem bulunmuyor. İlk notunuzu ekleyin."
-            icon="📝"
-            action={<ActionBtn label="Not Ekle" />}
-          />
-          <EmptyState
-            title="Klip bulunamadı"
-            description="Oyuncuya ait etiketlenmiş video klibi mevcut değil."
-            icon="🎬"
-            action={<ActionBtn label="Klip Oluştur" />}
-          />
-        </div>
-      </section>
+      {/* ── 03 Processing ── */}
+      <Section num="03" title="Processing">
+        <EmptyState
+          title="Analiz devam ediyor"
+          description="Video işleme ve metrik hesaplama süreci devam ediyor. Tamamlandığında bildirim alacaksın."
+          icon="⚙️"
+          action={<Btn label="Durumu Görüntüle" primary={false} />}
+        />
+        <ErrorState
+          title="Analiz başarısız oldu"
+          description="Sunucu kaynaklı bir hata oluştu. Analiz sürecini tekrar başlatmayı deneyebilirsin."
+          icon="❌"
+          action={<Btn label="Süreci Yeniden Başlat" />}
+        />
+        <EmptyState
+          title="Yeniden dene"
+          description="Önceki analiz tamamlanamadı. Videoyu ve kalibrasyon ayarlarını kontrol ettikten sonra tekrar başlatabilirsin."
+          icon="�"
+          action={<Btn label="Analizi Başlat" />}
+          secondaryAction={<Btn label="Kalibrasyona Git" primary={false} />}
+        />
+      </Section>
 
-      {/* 4. Raporlar & Diğer */}
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-          <span className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-sm">04</span>
-          Raporlar & Diğer
-        </h2>
-        <div className="grid gap-6 md:grid-cols-2">
-          <EmptyState
-            title="Henüz rapor oluşturulmadı"
-            description="Analiz tamamlandıktan sonra maç özeti ve detaylı raporlar burada listelenir."
-            icon="📄"
-            action={<ActionBtn label="Analizi Başlat" />}
-          />
-          <ErrorState
-            title="PDF export başarısız"
-            description="Rapor oluşturulurken teknik bir hata oluştu. Lütfen tarayıcıyı yenileyip tekrar deneyin."
-            icon="📑"
-            action={<ActionBtn label="Tekrar Dene" />}
-          />
-          <ErrorState
-            title="Tracking güven skoru düşük"
-            description="Video kalitesi nedeniyle oyuncu takibi düşük doğrulukla yapılıyor. Metrikler sapma gösterebilir."
-            icon="🎯"
-            action={<ActionBtn label="Yine de Devam Et" />}
-            secondaryAction={<ActionBtn label="İptal" primary={false} />}
-          />
-        </div>
-      </section>
+      {/* ── 04 Kalibrasyon ── */}
+      <Section num="04" title="Kalibrasyon">
+        <EmptyState
+          title="Kalibrasyon yapılmadı"
+          description="Maç videosundan saha koordinatları çıkarılabilmesi için önce saha noktalarını işaretlemen gerekiyor."
+          icon="📐"
+          action={<Btn label="Saha Kalibrasyonuna Git" />}
+        />
+        <ErrorState
+          title="Nokta sayısı yetersiz"
+          description="Saha sınırlarını belirlemek için en az 4 geçerli köşe noktası işaretlenmelidir."
+          icon="📍"
+          action={<Btn label="Noktaları Düzenle" />}
+        />
+        <ErrorState
+          title="Homografi kalitesi düşük"
+          description="İşaretlenen noktalar arasında perspektif uyumsuzluğu var. Noktaların doğruluğunu kontrol et."
+          icon="�"
+          action={<Btn label="Kalibrasyonu Kontrol Et" />}
+        />
+        <ErrorState
+          title="Saha çizgileri görünmüyor"
+          description="Görüntü kalitesi veya ışık nedeniyle saha çizgileri tespit edilemiyor. Manuel kalibrasyon gerekebilir."
+          icon="🚫"
+          action={<Btn label="Manuel Modu Aç" />}
+        />
+      </Section>
 
-      {/* UI Elements Showcase */}
+      {/* ── 05 Video Analiz ── */}
+      <Section num="05" title="Video Analiz">
+        <EmptyState
+          title="Video işlenmedi"
+          description="Bu maç için henüz video analizi çalıştırılmadı. Önce işleme adımını tamamla."
+          icon="�"
+          action={<Btn label="İşlemeye Git" />}
+        />
+        <ErrorState
+          title="Tracking güven skoru düşük"
+          description="Video kalitesi nedeniyle oyuncu takibi düşük doğrulukla yapılıyor. Metrikler sapma gösterebilir."
+          icon="🎯"
+          action={<Btn label="Yine de Devam Et" />}
+          secondaryAction={<Btn label="İptal" primary={false} />}
+        />
+        <EmptyState
+          title="Taktiksel uyarı bulunamadı"
+          description="Bu maçta kural motorunun tetiklediği taktiksel uyarı tespit edilmedi."
+          icon="⚡"
+          action={<Btn label="Eşik Değerlerini Ayarla" primary={false} />}
+        />
+        <EmptyState
+          title="Klip yok"
+          description="Bu maça ait etiketlenmiş video klibi mevcut değil. Analiz sırasında klip oluşturabilirsin."
+          icon="✂️"
+          action={<Btn label="Klip Oluştur" />}
+        />
+      </Section>
+
+      {/* ── 06 Oyuncular ── */}
+      <Section num="06" title="Oyuncular">
+        <EmptyState
+          title="Henüz oyuncu yok"
+          description="Takımına oyuncu ekleyerek gelişim takiplerini ve analizleri başlatabilirsin."
+          icon="👤"
+          action={<Btn label="Oyuncu Ekle" />}
+        />
+        <EmptyState
+          title="Filtreye uygun oyuncu yok"
+          description="Seçili kriterlere uygun oyuncu bulunamadı. Filtreleri genişletmeyi dene."
+          icon="👥"
+          action={<Btn label="Filtreleri Sıfırla" primary={false} />}
+        />
+      </Section>
+
+      {/* ── 07 Oyuncu Pasaportu ── */}
+      <Section num="07" title="Oyuncu Pasaportu">
+        <EmptyState
+          title="Yeterli maç verisi yok"
+          description="Bu oyuncu için gelişim trendi oluşturabilmek için en az 3 maç verisi gereklidir."
+          icon="📈"
+          action={<Btn label="Maç Verisi Ekle" />}
+        />
+        <EmptyState
+          title="Henüz scout notu yok"
+          description="Bu oyuncu için yapılmış bir gözlem bulunmuyor. İlk notunu ekle."
+          icon="📝"
+          action={<Btn label="Not Ekle" />}
+        />
+        <EmptyState
+          title="Klip yok"
+          description="Oyuncuya ait etiketlenmiş video klibi mevcut değil."
+          icon="🎬"
+          action={<Btn label="Klip Oluştur" />}
+        />
+      </Section>
+
+      {/* ── 08 Scouting ── */}
+      <Section num="08" title="Scouting">
+        <EmptyState
+          title="Filtreye uygun oyuncu yok"
+          description="Arama kriterlerine uygun oyuncu kaydı bulunamadı. Filtreleri kontrol et."
+          icon="🔍"
+          action={<Btn label="Filtreleri Temizle" primary={false} />}
+        />
+        <EmptyState
+          title="Scout notu yok"
+          description="Henüz hiçbir oyuncu için gözlem notu eklenmemiş."
+          icon="📋"
+          action={<Btn label="İlk Notu Ekle" />}
+        />
+      </Section>
+
+      {/* ── 09 Raporlar ── */}
+      <Section num="09" title="Raporlar">
+        <EmptyState
+          title="Henüz rapor oluşturulmadı"
+          description="Analiz tamamlandıktan sonra maç özeti ve detaylı raporlar burada listelenir."
+          icon="📄"
+          action={<Btn label="Analizi Başlat" />}
+        />
+        <ErrorState
+          title="PDF export başarısız"
+          description="Rapor oluşturulurken teknik bir hata oluştu. Tarayıcıyı yenileyip tekrar dene."
+          icon="📑"
+          action={<Btn label="Tekrar Dene" />}
+          secondaryAction={<Btn label="Sayfayı Yenile" primary={false} onClick={() => window.location.reload()} />}
+        />
+      </Section>
+
+      {/* ── Global Bileşenler ── */}
       <section className="space-y-8 pt-10 border-t border-white/10">
         <div>
           <h2 className="text-xl font-bold text-white">Global Bileşenler</h2>
@@ -229,37 +289,46 @@ export default function UiStatesPage() {
             <h3 className="text-sm font-semibold text-white uppercase tracking-wider">Etkileşim</h3>
             <div className="flex flex-wrap gap-3">
               <button
-                onClick={() => setOpen(true)}
+                onClick={() => setModalOpen(true)}
                 className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-text-muted hover:text-white hover:border-emerald-400/40 transition-all"
               >
                 Modal Aç
               </button>
               <button
-                onClick={() => pushToast({ title: "Başarılı", message: "İşlem başarıyla tamamlandı.", tone: "success" })}
+                onClick={() => push({ title: "Başarılı", message: "İşlem başarıyla tamamlandı.", tone: "success" })}
                 className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 transition-all"
               >
                 Success Toast
               </button>
               <button
-                onClick={() => pushToast({ title: "Uyarı", message: "Lütfen verileri kontrol edin.", tone: "warning" })}
+                onClick={() => push({ title: "Uyarı", message: "Lütfen verileri kontrol edin.", tone: "warning" })}
                 className="rounded-xl bg-amber-600/20 border border-amber-600/40 px-4 py-2 text-sm font-semibold text-amber-500 hover:bg-amber-600/30 transition-all"
               >
                 Warning Toast
+              </button>
+              <button
+                onClick={() => push({ title: "Hata", message: "İşlem gerçekleştirilemedi.", tone: "danger" })}
+                className="rounded-xl bg-red-600/20 border border-red-600/40 px-4 py-2 text-sm font-semibold text-red-400 hover:bg-red-600/30 transition-all"
+              >
+                Error Toast
               </button>
             </div>
           </div>
         </div>
       </section>
 
-      <Modal open={open} title="Sistem Mesajı" onClose={() => setOpen(false)}>
+      <Modal open={modalOpen} title="Sistem Mesajı" onClose={() => setModalOpen(false)}>
         <div className="space-y-4">
           <p className="text-sm text-text-muted">
-            Bu modal PitchVision Lite tasarım sistemindeki standart diyalog yapısını gösterir. 
-            İçerik buraya gelir ve aksiyon butonları aşağıda yer alır.
+            Bu modal PitchVision Lite tasarım sistemindeki standart diyalog yapısını gösterir.
           </p>
           <div className="flex justify-end gap-3 mt-6">
-            <button onClick={() => setOpen(false)} className="px-4 py-2 text-sm font-medium text-text-soft hover:text-white">İptal</button>
-            <button onClick={() => setOpen(false)} className="px-6 py-2 text-sm font-bold bg-emerald-600 text-white rounded-xl">Onayla</button>
+            <button onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm font-medium text-text-soft hover:text-white">
+              İptal
+            </button>
+            <button onClick={() => setModalOpen(false)} className="px-6 py-2 text-sm font-bold bg-emerald-600 text-white rounded-xl">
+              Onayla
+            </button>
           </div>
         </div>
       </Modal>
@@ -268,4 +337,3 @@ export default function UiStatesPage() {
     </div>
   );
 }
-
